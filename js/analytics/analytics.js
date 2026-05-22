@@ -1,5 +1,6 @@
 import { db, subscribeAuth } from '../firebase.js';
 import { collection, getDocs, query, orderBy } from 'https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js';
+import { countAttendanceRecords, calculateAttendancePercent } from '../attendance/engine.js';
 
 // render helpers
 function el(id) { return document.getElementById(id); }
@@ -25,16 +26,35 @@ function renderCards(total, present) {
   el('attendance-percent').textContent = pct;
 }
 
-function renderChart(labels, data) {
+function renderChart(statusCounts) {
   const canvas = el('attendance-chart');
   canvas.style.display = 'block';
   const ctx = canvas.getContext('2d');
-  // destroy existing chart if present
   if(window._attendanceChart) window._attendanceChart.destroy();
+  const labels = ['Present', 'Absent', 'Off', 'Holiday', 'Vacation', 'Unmarked'];
+  const data = [
+    statusCounts.present,
+    statusCounts.absent,
+    statusCounts.off,
+    statusCounts.holiday,
+    statusCounts.vacation,
+    statusCounts.unmarked
+  ];
   window._attendanceChart = new Chart(ctx, {
-    type: 'line',
-    data: { labels, datasets: [{ label: 'Attendance (1=Present)', data, borderColor: '#6ee7b7', backgroundColor: 'rgba(110,231,183,0.12)', tension:0.2 }] },
-    options: { scales: { y: { min: 0, max: 1, ticks: { callback: v => v === 1 ? 'Present' : 'Absent' } } } }
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Attendance status counts',
+        data,
+        backgroundColor: ['#37b24d', '#fa5252', '#6c757d', '#3366ff', '#9b5de5', '#adb5bd']
+      }]
+    },
+    options: {
+      scales: {
+        y: { beginAtZero: true, ticks: { precision: 0 } }
+      }
+    }
   });
 }
 
@@ -51,13 +71,11 @@ subscribeAuth(async (user) => {
       renderPlaceholder('No attendance data yet. Mark attendance to populate analytics.');
       return;
     }
-    // assume each doc has { status: 'present' | 'absent' | 'off', date }
-    const labels = rows.map(r => r.date || r.id);
-    const numeric = rows.map(r => (r.status === 'present' ? 1 : 0));
-    const total = rows.filter(r => r.status !== 'off').length;
-    const present = rows.filter(r => r.status === 'present').length;
+    const counts = countAttendanceRecords(rows);
+    const total = counts.totalWorking;
+    const present = counts.present;
     renderCards(total, present);
-    renderChart(labels, numeric);
+    renderChart(counts);
     el('analytics-placeholder').textContent = '';
   } catch (e) {
     renderPlaceholder('Error loading analytics: ' + e.message);
