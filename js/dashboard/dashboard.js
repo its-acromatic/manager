@@ -53,19 +53,22 @@ async function loadAttendanceSummary(uid) {
 
   try {
     const attCol = collection(db, 'users', uid, 'attendance');
-    const q = query(attCol, orderBy('date'));
-    const snapshot = await getDocs(q);
+    const snapshot = await getDocs(attCol);
 
     let totalWorking = 0, present = 0;
     snapshot.forEach(doc => {
       const data = doc.data();
       if(!data) return;
 
-      if(data.status === 'present' || data.status === 'absent') {
+      const status = typeof data.status === 'string' ? data.status.toLowerCase() : null;
+      if(status === 'present' || status === 'absent') {
         totalWorking++;
-        if(data.status === 'present') present++;
-      } else if (data.workingDay !== undefined || data.present !== undefined) {
-        // fallback for legacy docs
+        if(status === 'present') present++;
+        return;
+      }
+
+      // fallback for legacy docs saved using workingDay/present fields
+      if(data.workingDay !== undefined || data.present !== undefined) {
         if(data.workingDay) {
           totalWorking++;
           if(data.present) present++;
