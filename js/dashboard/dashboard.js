@@ -1,6 +1,6 @@
 import { db } from '../firebase.js';
 import { collection, query, orderBy, getDocs } from 'https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js';
-import { countAttendanceRecords, calculateAttendancePercent, calculateSafeLeavesFromTotals } from '../attendance/engine.js';
+import { countAttendanceRecords, calculateAttendancePercent, calculateSafeLeavesFromTotals, countAttendanceNotes, calculateAttendanceStreaks } from '../attendance/engine.js';
 import { formatLocalISO, parseISOToLocalDate } from '../utils/date.js';
 
 export async function loadDashboard(uid) {
@@ -120,14 +120,18 @@ async function loadAttendanceSummary(uid) {
     const percent = calculateAttendancePercent(counts.present, counts.totalWorking);
     percentEl.textContent = counts.totalWorking === 0 ? '--%' : `${percent}%`;
     const safeLeaves = calculateSafeLeavesFromTotals(counts.present, counts.totalWorking, 75);
+    const notesCount = countAttendanceNotes(records);
+    const streaks = calculateAttendanceStreaks(records);
     const extras = [];
     if(counts.off) extras.push(`${counts.off} Off`);
     if(counts.holiday) extras.push(`${counts.holiday} Holiday`);
     if(counts.vacation) extras.push(`${counts.vacation} Vacation`);
+    const noteSummary = notesCount ? ` ${notesCount} note${notesCount === 1 ? '' : 's'}` : '';
+    const streakSummary = ` Current streak ${streaks.current}, best ${streaks.best}.`;
 
     infoEl.textContent = counts.totalWorking === 0
-      ? `No working days recorded yet.${extras.length ? ' ' + extras.join(', ') : ''}`
-      : `Present ${counts.present}/${counts.totalWorking}. Safe leaves left: ${safeLeaves}.${extras.length ? ' ' + extras.join(', ') : ''}`;
+      ? `No working days recorded yet.${noteSummary}${extras.length ? ' ' + extras.join(', ') : ''}`
+      : `Present ${counts.present}/${counts.totalWorking}. Safe leaves left: ${safeLeaves}.${streakSummary}${noteSummary}${extras.length ? ' ' + extras.join(', ') : ''}`;
   } catch (err) {
     console.error(err);
   }

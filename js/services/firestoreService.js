@@ -42,11 +42,22 @@ export async function saveAttendanceEntry(uid, entry) {
 export async function saveAttendanceRange(uid, start, end, status) {
   if (!uid || !start || !end || !status) return { updated: 0 };
   const dates = generateSessionDates(start, end);
+  const existingDocs = await getDocs(attendanceCollection(uid));
+  const existingMeta = {};
+  existingDocs.forEach((docSnap) => {
+    const data = docSnap.data();
+    const iso = (data && data.date) ? data.date : docSnap.id;
+    if (!iso || iso < start || iso > end) return;
+    existingMeta[iso] = data.meta || {};
+  });
+
   const batch = writeBatch(db);
   let updated = 0;
   dates.forEach((date) => {
     const ref = doc(attendanceCollection(uid), date);
-    batch.set(ref, { date, status });
+    const payload = { date, status };
+    if (existingMeta[date]) payload.meta = existingMeta[date];
+    batch.set(ref, payload);
     updated += 1;
   });
   await batch.commit();

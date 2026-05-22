@@ -48,6 +48,60 @@ export function countAttendanceRecords(records = []) {
   return counts;
 }
 
+export function isNeutralStatus(status) {
+  return status === DayStatus.OFF || status === DayStatus.HOLIDAY || status === DayStatus.VACATION;
+}
+
+export function calculateAttendanceStreaks(records = []) {
+  const sorted = [...records]
+    .filter((record) => record && typeof record.date === 'string' && record.status)
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  let best = 0;
+  let running = 0;
+  let current = 0;
+
+  sorted.forEach((record) => {
+    const status = normalizeStatus(record.status);
+    if (isNeutralStatus(status)) return;
+    if (status === DayStatus.PRESENT) {
+      running += 1;
+      if (running > best) best = running;
+    } else {
+      running = 0;
+    }
+  });
+
+  for (let i = sorted.length - 1; i >= 0; i -= 1) {
+    const status = normalizeStatus(sorted[i].status);
+    if (isNeutralStatus(status)) continue;
+    if (status === DayStatus.PRESENT) {
+      current += 1;
+    } else {
+      break;
+    }
+  }
+
+  return { current, best };
+}
+
+export function countAttendanceNotes(records = []) {
+  return records.reduce((count, record) => {
+    const note = record?.meta?.note;
+    return count + (typeof note === 'string' && note.trim() ? 1 : 0);
+  }, 0);
+}
+
+export function getLastAttendanceNote(records = []) {
+  const notes = [...records]
+    .filter((record) => record?.meta?.note && typeof record.meta.note === 'string')
+    .map((record) => ({ date: record.date, note: record.meta.note.trim() }))
+    .filter((item) => item.note)
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  return notes.length ? notes[notes.length - 1].note : '';
+}
+
 export function calculateAttendancePercent(attended, total) {
   if (!total || total === 0) return 0;
   return Number(((attended / total) * 100).toFixed(2));

@@ -1,13 +1,16 @@
 import { db } from '../firebase.js';
-import { collection, doc, setDoc, getDocs, getDoc } from 'https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js';
+import { collection, doc, getDocs, getDoc } from 'https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js';
 import { showLoginModal, showAttendanceModal, showAttendanceRangeModal } from '../modal.js';
-import { saveAttendanceRange } from '../services/firestoreService.js';
+import { saveAttendanceRange, saveAttendanceEntry } from '../services/firestoreService.js';
 import {
   DayStatus,
   generateSessionDayObjects,
   calculateAttendanceFromSession,
   predictFinalAttendance,
-  calculateSafeLeaves
+  calculateSafeLeaves,
+  calculateAttendanceStreaks,
+  countAttendanceNotes,
+  getLastAttendanceNote
 } from './engine.js';
 import { todayISO } from '../utils/date.js';
 
@@ -71,8 +74,8 @@ export async function refreshAttendanceForUser(uid) {
       }
     }
     showAttendanceModal({ date: info.dateStr, existing, onSave: async (payload) => {
-      const toSave = { date: payload.date, status: payload.status };
-      await setDoc(ref, toSave);
+      const toSave = { date: payload.date, status: payload.status, meta: payload.meta || {} };
+      await saveAttendanceEntry(uid, toSave);
       await loadAttendance(uid);
     }});
   });
@@ -115,6 +118,8 @@ async function loadAttendance(uid) {
 
   // Render calendar events for the session
   const events = sessionDays.map(d => {
+    const noteText = d.meta?.note ? d.meta.note.trim() : '';
+    const shortNote = noteText && noteText.length > 30 ? `${noteText.slice(0, 27)}...` : noteText;
     let title = '';
     let bg = '#999';
     switch(d.status) {
@@ -124,6 +129,9 @@ async function loadAttendance(uid) {
       case DayStatus.HOLIDAY: title = 'Holiday'; bg = '#3366ff'; break;
       case DayStatus.VACATION: title = 'Vacation'; bg = '#9b5de5'; break;
       default: title = ''; bg = 'transparent'; break;
+    }
+    if (shortNote) {
+      title = title ? `${title} • ${shortNote}` : shortNote;
     }
     return { title, start: d.date, allDay: true, backgroundColor: bg };
   });
@@ -140,10 +148,14 @@ async function loadAttendance(uid) {
 
   const summaryEl = document.getElementById('attendance-summary');
   if(summaryEl) {
+    const streaks = calculateAttendanceStreaks(sessionDays);
+    const notesCount = countAttendanceNotes(sessionDays);
+    const lastNote = getLastAttendanceNote(sessionDays);
+    const noteSummary = notesCount ? ` Notes ${notesCount}${lastNote ? `, last: "${lastNote.length > 40 ? `${lastNote.slice(0, 40)}...` : lastNote}"` : ''}.` : '';
     if(stats.totalWorking === 0) {
-      summaryEl.textContent = 'No attendance recorded yet.';
+      summaryEl.textContent = `No attendance recorded yet.${noteSummary}`;
     } else {
-      summaryEl.textContent = `Present ${stats.present}/${stats.totalWorking} — ${stats.percent}% (Predicted ${pred.predictedPercent}% — safe leaves left: ${safe.maxFutureAbsences})`;
+      summaryEl.textContent = `Present ${stats.present}/${stats.totalWorking} — ${stats.percent}% (Predicted ${pred.predictedPercent}% — safe leaves left: ${safe.maxFutureAbsences}). Current streak ${streaks.current}, best ${streaks.best}.${noteSummary}`;
     }
   }
 }

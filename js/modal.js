@@ -188,6 +188,7 @@ export function showAttendanceModal({ date, existing = null, onSave } = {}) {
   const overlay = createOverlay();
   const modal = document.createElement('div');
   modal.className = 'modal';
+  const existingNote = existing?.meta?.note ? existing.meta.note : '';
   modal.innerHTML = `
     <h3>Mark Attendance</h3>
     <label style="color:var(--secondary)">Date</label>
@@ -199,14 +200,17 @@ export function showAttendanceModal({ date, existing = null, onSave } = {}) {
       <button id="m-holiday" class="ghost" style="flex:1;min-width:80px">Holiday</button>
       <button id="m-vacation" class="ghost" style="flex:1;min-width:80px">Vacation</button>
     </div>
+    <label style="color:var(--secondary);margin-top:14px">Note</label>
+    <textarea id="m-note" rows="3" placeholder="Optional note"></textarea>
     <div class="actions" style="margin-top:14px">
       <button id="m-save" class="primary">Save</button>
       <button id="m-cancel" class="ghost">Cancel</button>
     </div>
   `;
-
   overlay.appendChild(modal);
   document.body.appendChild(overlay);
+  const noteInput = modal.querySelector('#m-note');
+  if (noteInput) noteInput.value = existingNote;
 
   overlay.addEventListener('click', (e) => { if(e.target === overlay) overlay.remove(); });
 
@@ -248,8 +252,10 @@ export function showAttendanceModal({ date, existing = null, onSave } = {}) {
   cancelBtn.addEventListener('click', () => overlay.remove());
   saveBtn.addEventListener('click', () => {
     const dateVal = modal.querySelector('#m-date').value;
+    const note = modal.querySelector('#m-note').value.trim();
     if(!dateVal) return;
-    const payload = { date: dateVal, status: state };
+    const payload = { date: dateVal, status: state, meta: {} };
+    if(note) payload.meta.note = note;
     if(onSave) onSave(payload);
     overlay.remove();
   });
