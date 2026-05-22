@@ -41,16 +41,16 @@ export async function refreshAttendanceForUser(uid) {
     // convert legacy doc shape to engine shape
     let existing = null;
     if(docData) {
-      if(docData.workingDay === false) existing = { status: DayStatus.OFF, meta: {} };
-      else existing = { status: docData.present ? DayStatus.PRESENT : DayStatus.ABSENT, meta: {} };
+      if(typeof docData.status === 'string') {
+        existing = { status: docData.status.toLowerCase(), meta: docData.meta || {} };
+      } else if(docData.workingDay === false) {
+        existing = { status: DayStatus.OFF, meta: {} };
+      } else {
+        existing = { status: docData.present ? DayStatus.PRESENT : DayStatus.ABSENT, meta: {} };
+      }
     }
     showAttendanceModal({ date: info.dateStr, existing, onSave: async (payload) => {
-      // payload from modal uses { date, workingDay, present }
-      // convert to storage schema: { date, status }
-      const toSave = {};
-      if(payload.workingDay === false) toSave.status = DayStatus.OFF;
-      else toSave.status = payload.present ? DayStatus.PRESENT : DayStatus.ABSENT;
-      toSave.date = payload.date;
+      const toSave = { date: payload.date, status: payload.status };
       await setDoc(ref, toSave);
       await loadAttendance(uid);
     }});
