@@ -1,6 +1,7 @@
 import { db } from '../firebase.js';
 import { collection, query, orderBy, getDocs } from 'https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js';
 import { countAttendanceRecords, calculateAttendancePercent, calculateSafeLeavesFromTotals } from '../attendance/engine.js';
+import { formatLocalISO, parseISOToLocalDate } from '../utils/date.js';
 
 export async function loadDashboard(uid) {
   console.log('Dashboard Loaded');
@@ -32,9 +33,21 @@ async function loadUpcomingEvents(uid) {
     const events = [];
     snapshot.forEach(doc => events.push({ id: doc.id, ...doc.data() }));
 
-    const todayISO = new Date().toISOString().slice(0,10);
-    const todayEvents = events.filter(ev => ev.date === todayISO);
-    const upcomingEvents = events.filter(ev => ev.date > todayISO).slice(0, 3);
+    const todayISO = formatLocalISO(new Date());
+    const normalizeDateOnly = (value) => {
+      if(!value) return null;
+      const dateObj = typeof value === 'string' ? parseISOToLocalDate(value) : value;
+      if(!(dateObj instanceof Date) || Number.isNaN(dateObj.getTime())) return null;
+      return formatLocalISO(dateObj);
+    };
+
+    const normalizedEvents = events.map(ev => ({
+      ...ev,
+      normalizedDate: normalizeDateOnly(ev.date)
+    }));
+
+    const todayEvents = normalizedEvents.filter(ev => ev.normalizedDate === todayISO);
+    const upcomingEvents = normalizedEvents.filter(ev => ev.normalizedDate && ev.normalizedDate > todayISO).slice(0, 3);
 
     todayList.innerHTML = '';
     if(todayEvents.length === 0) {
@@ -60,10 +73,11 @@ async function loadUpcomingEvents(uid) {
         li.innerHTML = `<strong>${ev.title}</strong><br><small style="color:var(--secondary)">${ev.date}${time}</small>${desc}`;
         upcomingList.appendChild(li);
       });
-      if(events.filter(ev => ev.date > todayISO).length > upcomingEvents.length) {
+      const totalFuture = normalizedEvents.filter(ev => ev.normalizedDate && ev.normalizedDate > todayISO).length;
+      if(totalFuture > upcomingEvents.length) {
         const more = document.createElement('li');
         more.style.color = 'var(--secondary)';
-        more.textContent = `And ${events.filter(ev => ev.date > todayISO).length - upcomingEvents.length} more upcoming event(s)`;
+        more.textContent = `And ${totalFuture - upcomingEvents.length} more upcoming event(s)`;
         upcomingList.appendChild(more);
       }
     }
