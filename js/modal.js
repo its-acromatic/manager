@@ -1,246 +1,128 @@
-import { signIn, signUp } from './firebase.js';
+import { db } from '../firebase.js';
+import { collection, doc, setDoc, getDocs, getDoc } from 'https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js';
+import { showLoginModal, showAttendanceModal } from '../modal.js';
+import {
+  DayStatus,
+  generateSessionDayObjects,
+  calculateAttendanceFromSession,
+  predictFinalAttendance,
+  calculateSafeLeaves
+} from './engine.js';
+import { todayISO } from '../utils/date.js';
 
-function createOverlay() {
-  const overlay = document.createElement('div');
-  overlay.className = 'modal-overlay';
-  return overlay;
+let calendar;
+
+export function initAttendance(containerId = 'attendance-calendar') {
+  const calendarEl = document.getElementById(containerId);
+  if(!calendarEl) return;
+  calendar = new FullCalendar.Calendar(calendarEl, {
+    initialView: 'dayGridMonth',
+    events: []
+  });
+  calendar.render();
 }
 
-export function showLoginModal({ onSuccess, force = false } = {}) {
-  const overlay = createOverlay();
-  const modal = document.createElement('div');
-  modal.className = 'modal';
+export async function refreshAttendanceForUser(uid) {
+  const calendarEl = document.getElementById('attendance-calendar');
+  if(!calendarEl) return;
+  if(!uid) {
+    showLoginModal({ onSuccess: () => {}, force: true });
+    calendar.removeAllEvents();
+    const summaryEl = document.getElementById('attendance-summary');
+    if(summaryEl) summaryEl.textContent = 'Sign in to view attendance.';
+    return;
+  }
 
-  // build inner HTML depending on forced mode
-  modal.innerHTML = `
-    <h3>Sign in to Manager</h3>
-    <input id="m-email" type="email" placeholder="Email" />
-    <input id="m-pass" type="password" placeholder="Password" />
-    <div class="actions">
-      <button id="m-signin" class="primary">Sign In</button>
-      <button id="m-signup" class="ghost">Sign Up</button>
-      ${force ? '' : '<button id="m-close" class="ghost">Close</button>'}
-    </div>
-    <p id="m-status" style="color:var(--secondary);margin-top:8px"></p>
-  `;
-
-  overlay.appendChild(modal);
-  document.body.appendChild(overlay);
-
-  const email = modal.querySelector('#m-email');
-  const pass = modal.querySelector('#m-pass');
-  const signin = modal.querySelector('#m-signin');
-  const signup = modal.querySelector('#m-signup');
-  const close = modal.querySelector('#m-close');
-  const status = modal.querySelector('#m-status');
-
-  async function doClose() { overlay.remove(); }
-
-  // only allow outside-click to close when not forced
-  if(!force) overlay.addEventListener('click', (e) => { if(e.target === overlay) doClose(); });
-
-  // prevent ESC from closing when forced
-  function onKey(e) { if(e.key === 'Escape' && !force) doClose(); }
-  document.addEventListener('keydown', onKey);
-
-  signin.addEventListener('click', async () => {
-    try {
-      await signIn(email.value, pass.value);
-      status.textContent = 'Signed in';
-      if(onSuccess) onSuccess();
-      doClose();
-    } catch (e) { status.textContent = 'Sign in failed: ' + e.message; }
-  });
-
-  signup.addEventListener('click', async () => {
-    try {
-      await signUp(email.value, pass.value);
-      status.textContent = 'Account created and signed in';
-      if(onSuccess) onSuccess();
-      doClose();
-    } catch (e) { status.textContent = 'Sign up failed: ' + e.message; }
-  });
-
-  if(close) close.addEventListener('click', doClose);
-  // cleanup listener on close
-  overlay.addEventListener('remove', () => document.removeEventListener('keydown', onKey));
-}
-
-export function showEventModal({ date, existing = null, onSave, onDelete } = {}) {
-  const overlay = createOverlay();
-  const modal = document.createElement('div');
-  modal.className = 'modal';
-  modal.innerHTML = `
-    <h3>${existing ? 'Edit Event' : 'Add Event'}</h3>
-    <label style="color:var(--secondary)">Date</label>
-    <input id="m-date" type="date" value="${date || ''}" />
-    <label style="color:var(--secondary)">Title</label>
-    <input id="m-title" type="text" value="${existing ? existing.title : ''}" />
-    <div class="row">
-      <div style="flex:1">
-        <label style="color:var(--secondary)">Start time</label>
-        <input id="m-start" type="time" value="${existing ? existing.startTime || '' : ''}" />
-      </div>
-      <div style="width:12px"></div>
-      <div style="flex:1">
-        <label style="color:var(--secondary)">End time</label>
-        <input id="m-end" type="time" value="${existing ? existing.endTime || '' : ''}" />
-      </div>
-    </div>
-    <label style="color:var(--secondary)">Description</label>
-    <textarea id="m-desc" rows="4">${existing ? existing.description || '' : ''}</textarea>
-    <div class="actions">
-      <button id="m-save" class="primary">Save</button>
-      <button id="m-cancel" class="ghost">Cancel</button>
-    </div>
-  `;
-  overlay.appendChild(modal);
-  document.body.appendChild(overlay);
-
-  overlay.addEventListener('click', (e) => { if(e.target === overlay) overlay.remove(); });
-
-  modal.querySelector('#m-cancel').addEventListener('click', () => overlay.remove());
-  modal.querySelector('#m-save').addEventListener('click', () => {
-    const title = modal.querySelector('#m-title').value.trim();
-    const dateVal = modal.querySelector('#m-date').value;
-    const startTime = modal.querySelector('#m-start').value || '';
-    const endTime = modal.querySelector('#m-end').value || '';
-    const description = modal.querySelector('#m-desc').value.trim() || '';
-    if(!title || !dateVal) return;
-    if(onSave) onSave({ title, date: dateVal, description, startTime, endTime });
-    overlay.remove();
-  });
-  // delete handler when editing an existing event
-  if(existing && existing.id) {
-    const del = document.createElement('button');
-    del.className = 'ghost';
-    del.textContent = 'Delete';
-    del.style.marginLeft = '8px';
-    del.addEventListener('click', () => {
-      if(confirm('Delete this event?')) {
-        if(typeof onDelete === 'function') onDelete(existing.id);
-        overlay.remove();
+  calendar.setOption('dateClick', async (info) => {
+    // check if attendance exists for this date
+    const ref = doc(db, 'users', uid, 'attendance', info.dateStr);
+    const snap = await getDoc(ref);
+    const docData = snap && snap.exists ? snap.data() : null;
+    // convert legacy doc shape to engine shape
+    let existing = null;
+    if(docData) {
+      if(typeof docData.status === 'string') {
+        existing = { status: docData.status.toLowerCase(), meta: docData.meta || {} };
+      } else if(docData.workingDay === false) {
+        existing = { status: DayStatus.OFF, meta: {} };
+      } else {
+        existing = { status: docData.present ? DayStatus.PRESENT : DayStatus.ABSENT, meta: {} };
       }
-    });
-    const actions = modal.querySelector('.actions');
-    actions.insertBefore(del, actions.firstChild);
-  }
-}
-
-export function showDayModal({ date, events = [], onAdd, onOpenEvent } = {}) {
-  const overlay = createOverlay();
-  const modal = document.createElement('div');
-  modal.className = 'modal';
-  modal.innerHTML = `
-    <h3>Events on ${date}</h3>
-    <div id="day-events-list" style="max-height:320px;overflow:auto;margin-top:8px"></div>
-    <div class="actions">
-      <button id="day-add" class="primary">Add Event</button>
-      <button id="day-close" class="ghost">Close</button>
-    </div>
-  `;
-  overlay.appendChild(modal);
-  document.body.appendChild(overlay);
-
-  const list = modal.querySelector('#day-events-list');
-  function render() {
-    list.innerHTML = '';
-    if(!events || events.length === 0) {
-      const p = document.createElement('div');
-      p.className = 'muted';
-      p.textContent = 'No events for this date.';
-      list.appendChild(p);
-      return;
     }
-    events.forEach(ev => {
-      const item = document.createElement('div');
-      item.style.display = 'flex';
-      item.style.justifyContent = 'space-between';
-      item.style.alignItems = 'center';
-      item.style.padding = '8px 6px';
-      item.style.borderBottom = '1px solid rgba(255,255,255,0.02)';
-      const left = document.createElement('div');
-      left.style.flex = '1';
-      const title = document.createElement('div');
-      title.textContent = ev.title || '(untitled)';
-      const meta = document.createElement('div');
-      meta.className = 'muted';
-      meta.style.fontSize = '0.9rem';
-      meta.textContent = (ev.startTime ? ev.startTime : '') + (ev.endTime ? ' - ' + ev.endTime : '') + (ev.description ? ' • ' + ev.description : '');
-      left.appendChild(title);
-      left.appendChild(meta);
-      const openBtn = document.createElement('button');
-      openBtn.className = 'ghost';
-      openBtn.textContent = 'Open';
-      openBtn.addEventListener('click', () => { if(onOpenEvent) onOpenEvent(ev); overlay.remove(); });
-      item.appendChild(left);
-      item.appendChild(openBtn);
-      list.appendChild(item);
-    });
-  }
-  render();
+    showAttendanceModal({ date: info.dateStr, existing, onSave: async (payload) => {
+      const toSave = { date: payload.date, status: payload.status };
+      await setDoc(ref, toSave);
+      await loadAttendance(uid);
+    }});
+  });
 
-  modal.querySelector('#day-add').addEventListener('click', () => { if(onAdd) onAdd(); overlay.remove(); });
-  modal.querySelector('#day-close').addEventListener('click', () => overlay.remove());
+  await loadAttendance(uid);
 }
 
-export function showAttendanceModal({ date, existing = null, onSave } = {}) {
-  const overlay = createOverlay();
-  const modal = document.createElement('div');
-  modal.className = 'modal';
-  modal.innerHTML = `
-    <h3>Mark Attendance</h3>
-    <label style="color:var(--secondary)">Date</label>
-    <input id="m-date" type="date" value="${date || ''}" />
-    <div style="margin-top:12px;display:flex;gap:8px;justify-content:space-between">
-      <button id="m-off" class="ghost" style="flex:1">Off</button>
-      <button id="m-present" class="primary" style="flex:1">Present</button>
-      <button id="m-absent" class="ghost" style="flex:1">Absent</button>
-    </div>
-    <div class="actions" style="margin-top:14px">
-      <button id="m-save" class="primary">Save</button>
-      <button id="m-cancel" class="ghost">Cancel</button>
-    </div>
-  `;
-
-  overlay.appendChild(modal);
-  document.body.appendChild(overlay);
-
-  overlay.addEventListener('click', (e) => { if(e.target === overlay) overlay.remove(); });
-
-  const btnOff = modal.querySelector('#m-off');
-  const btnPresent = modal.querySelector('#m-present');
-  const btnAbsent = modal.querySelector('#m-absent');
-  const saveBtn = modal.querySelector('#m-save');
-  const cancelBtn = modal.querySelector('#m-cancel');
-
-  // initialize selection based on existing
-  let state = 'off';
-  if(existing && existing.workingDay) state = existing.present ? 'present' : 'absent';
-
-  function updateSelection() {
-    btnOff.classList.toggle('primary', state === 'off');
-    btnOff.classList.toggle('ghost', state !== 'off');
-    btnPresent.classList.toggle('primary', state === 'present');
-    btnPresent.classList.toggle('ghost', state !== 'present');
-    btnAbsent.classList.toggle('primary', state === 'absent');
-    btnAbsent.classList.toggle('ghost', state !== 'absent');
-  }
-  updateSelection();
-
-  btnOff.addEventListener('click', () => { state = 'off'; updateSelection(); });
-  btnPresent.addEventListener('click', () => { state = 'present'; updateSelection(); });
-  btnAbsent.addEventListener('click', () => { state = 'absent'; updateSelection(); });
-
-  cancelBtn.addEventListener('click', () => overlay.remove());
-  saveBtn.addEventListener('click', () => {
-    const dateVal = modal.querySelector('#m-date').value;
-    if(!dateVal) return;
-    let payload;
-    if(state === 'off') payload = { date: dateVal, workingDay: false, present: false };
-    if(state === 'present') payload = { date: dateVal, workingDay: true, present: true };
-    if(state === 'absent') payload = { date: dateVal, workingDay: true, present: false };
-    if(onSave) onSave(payload);
-    overlay.remove();
+async function loadAttendance(uid) {
+  const attCol = collection(db, 'users', uid, 'attendance');
+  const snapshot = await getDocs(attCol);
+  // build map of existing records: { date: { status, meta } }
+  const existingMap = {};
+  snapshot.forEach(d => {
+    const data = d.data();
+    // prefer explicit date field, fall back to document id (some legacy or malformed docs)
+    const iso = (data && data.date) ? data.date : d.id;
+    if(!iso) return;
+    if(data && data.status) {
+      existingMap[iso] = { status: data.status, meta: data.meta || {} };
+    } else if(data) {
+      // legacy shape
+      if(data.workingDay === false) existingMap[iso] = { status: DayStatus.OFF, meta: {} };
+      else existingMap[iso] = { status: data.present ? DayStatus.PRESENT : DayStatus.ABSENT, meta: {} };
+    } else {
+      // no data, skip
+    }
   });
+
+  // load session settings (optional)
+  const settingsRef = doc(db, 'users', uid, 'settings', 'session');
+  const settingsSnap = await getDoc(settingsRef);
+  const defaultStart = (new Date(new Date().getFullYear(), 0, 1)).toISOString().slice(0,10);
+  const defaultEnd = (new Date(new Date().getFullYear(), 11, 31)).toISOString().slice(0,10);
+  const sessionStart = settingsSnap && settingsSnap.exists() && settingsSnap.data().start ? settingsSnap.data().start : defaultStart;
+  const sessionEnd = settingsSnap && settingsSnap.exists() && settingsSnap.data().end ? settingsSnap.data().end : defaultEnd;
+  const requiredPercent = settingsSnap && settingsSnap.exists() && settingsSnap.data().requiredPercent ? settingsSnap.data().requiredPercent : 75;
+
+  // generate session days and merge existing records
+  let sessionDays = generateSessionDayObjects(sessionStart, sessionEnd, existingMap);
+
+  // Render calendar events for the session
+  const events = sessionDays.map(d => {
+    let title = '';
+    let bg = '#999';
+    switch(d.status) {
+      case DayStatus.PRESENT: title = 'Present'; bg = '#37b24d'; break;
+      case DayStatus.ABSENT: title = 'Absent'; bg = '#fa5252'; break;
+      case DayStatus.OFF: title = 'Off'; bg = '#6c757d'; break;
+      case DayStatus.HOLIDAY: title = 'Holiday'; bg = '#3366ff'; break;
+      case DayStatus.VACATION: title = 'Vacation'; bg = '#9b5de5'; break;
+      default: title = ''; bg = 'transparent'; break;
+    }
+    return { title, start: d.date, allDay: true, backgroundColor: bg };
+  });
+
+  if(!calendar) return;
+  calendar.removeAllEvents();
+  events.forEach(e => { if(e.title) calendar.addEvent(e); });
+
+  // compute attendance stats and predictions
+  const nowISO = todayISO();
+  const stats = calculateAttendanceFromSession(sessionDays, { uptoISO: nowISO });
+  const pred = predictFinalAttendance(sessionDays, { asOfISO: nowISO });
+  const safe = calculateSafeLeaves(sessionDays, requiredPercent, { asOfISO: nowISO });
+
+  const summaryEl = document.getElementById('attendance-summary');
+  if(summaryEl) {
+    if(stats.totalWorking === 0) {
+      summaryEl.textContent = 'No attendance recorded yet.';
+    } else {
+      summaryEl.textContent = `Present ${stats.present}/${stats.totalWorking} — ${stats.percent}% (Predicted ${pred.predictedPercent}% — safe leaves left: ${safe.maxFutureAbsences})`;
+    }
+  }
 }
