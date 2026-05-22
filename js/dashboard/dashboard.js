@@ -59,9 +59,17 @@ async function loadAttendanceSummary(uid) {
     let totalWorking = 0, present = 0;
     snapshot.forEach(doc => {
       const data = doc.data();
-      if(data.workingDay) {
+      if(!data) return;
+
+      if(data.status === 'present' || data.status === 'absent') {
         totalWorking++;
-        if(data.present) present++;
+        if(data.status === 'present') present++;
+      } else if (data.workingDay !== undefined || data.present !== undefined) {
+        // fallback for legacy docs
+        if(data.workingDay) {
+          totalWorking++;
+          if(data.present) present++;
+        }
       }
     });
 
