@@ -19,9 +19,11 @@ export async function loadDashboard(uid) {
 }
 
 async function loadUpcomingEvents(uid) {
-  const list = document.getElementById('events-list');
-  if(!list) return;
-  list.innerHTML = 'Loading...';
+  const todayList = document.getElementById('today-events-list');
+  const upcomingList = document.getElementById('events-list');
+  if(!todayList || !upcomingList) return;
+  todayList.innerHTML = 'Loading...';
+  upcomingList.innerHTML = 'Loading...';
 
   try {
     const eventsCol = collection(db, 'users', uid, 'events');
@@ -30,18 +32,44 @@ async function loadUpcomingEvents(uid) {
     const events = [];
     snapshot.forEach(doc => events.push({ id: doc.id, ...doc.data() }));
 
-    list.innerHTML = '';
-    if(events.length === 0) list.innerHTML = '<li style="color:var(--secondary)">No upcoming events</li>';
+    const todayISO = new Date().toISOString().slice(0,10);
+    const todayEvents = events.filter(ev => ev.date === todayISO);
+    const upcomingEvents = events.filter(ev => ev.date > todayISO).slice(0, 3);
 
-    events.slice(0,6).forEach(ev => {
-      const li = document.createElement('li');
-      const time = ev.startTime ? ` — <small style="color:var(--secondary)">${ev.startTime}</small>` : '';
-      const desc = ev.description ? `<p style="color:var(--secondary);margin:6px 0">${ev.description}</p>` : '';
-      li.innerHTML = `<strong>${ev.title}</strong><br><small style="color:var(--secondary)">${ev.date}${time}</small>${desc}`;
-      list.appendChild(li);
-    });
+    todayList.innerHTML = '';
+    if(todayEvents.length === 0) {
+      todayList.innerHTML = '<li style="color:var(--secondary)">No events today</li>';
+    } else {
+      todayEvents.forEach(ev => {
+        const li = document.createElement('li');
+        const time = ev.startTime ? ` — <small style="color:var(--secondary)">${ev.startTime}</small>` : '';
+        const desc = ev.description ? `<p style="color:var(--secondary);margin:6px 0">${ev.description}</p>` : '';
+        li.innerHTML = `<strong>${ev.title}</strong><br><small style="color:var(--secondary)">${ev.date}${time}</small>${desc}`;
+        todayList.appendChild(li);
+      });
+    }
+
+    upcomingList.innerHTML = '';
+    if(upcomingEvents.length === 0) {
+      upcomingList.innerHTML = '<li style="color:var(--secondary)">No upcoming events</li>';
+    } else {
+      upcomingEvents.forEach(ev => {
+        const li = document.createElement('li');
+        const time = ev.startTime ? ` — <small style="color:var(--secondary)">${ev.startTime}</small>` : '';
+        const desc = ev.description ? `<p style="color:var(--secondary);margin:6px 0">${ev.description}</p>` : '';
+        li.innerHTML = `<strong>${ev.title}</strong><br><small style="color:var(--secondary)">${ev.date}${time}</small>${desc}`;
+        upcomingList.appendChild(li);
+      });
+      if(events.filter(ev => ev.date > todayISO).length > upcomingEvents.length) {
+        const more = document.createElement('li');
+        more.style.color = 'var(--secondary)';
+        more.textContent = `And ${events.filter(ev => ev.date > todayISO).length - upcomingEvents.length} more upcoming event(s)`;
+        upcomingList.appendChild(more);
+      }
+    }
   } catch (err) {
-    list.innerHTML = '<li style="color:var(--secondary)">Error loading events</li>';
+    todayList.innerHTML = '<li style="color:var(--secondary)">Error loading today events</li>';
+    upcomingList.innerHTML = '<li style="color:var(--secondary)">Error loading events</li>';
     console.error(err);
   }
 }
