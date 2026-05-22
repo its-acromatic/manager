@@ -39,6 +39,20 @@ export async function saveAttendanceEntry(uid, entry) {
   return entry;
 }
 
+export async function saveAttendanceRange(uid, start, end, status) {
+  if (!uid || !start || !end || !status) return { updated: 0 };
+  const dates = generateSessionDates(start, end);
+  const batch = writeBatch(db);
+  let updated = 0;
+  dates.forEach((date) => {
+    const ref = doc(attendanceCollection(uid), date);
+    batch.set(ref, { date, status });
+    updated += 1;
+  });
+  await batch.commit();
+  return { updated };
+}
+
 export async function fetchSessionSettings(uid) {
   if (!uid) return null;
   const snap = await getDoc(settingsDoc(uid));

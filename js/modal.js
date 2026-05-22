@@ -254,3 +254,84 @@ export function showAttendanceModal({ date, existing = null, onSave } = {}) {
     overlay.remove();
   });
 }
+
+export function showAttendanceRangeModal({ start = '', end = '', onSave } = {}) {
+  const overlay = createOverlay();
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.innerHTML = `
+    <h3>Bulk Mark Attendance</h3>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">
+      <div style="flex:1;min-width:160px;">
+        <label style="color:var(--secondary)">Start date</label>
+        <input id="m-start" type="date" value="${start}" />
+      </div>
+      <div style="flex:1;min-width:160px;">
+        <label style="color:var(--secondary)">End date</label>
+        <input id="m-end" type="date" value="${end}" />
+      </div>
+    </div>
+    <div style="margin-top:12px;display:flex;gap:8px;justify-content:space-between;flex-wrap:wrap">
+      <button id="m-off" class="ghost" style="flex:1;min-width:80px">Off</button>
+      <button id="m-present" class="ghost" style="flex:1;min-width:80px">Present</button>
+      <button id="m-absent" class="ghost" style="flex:1;min-width:80px">Absent</button>
+      <button id="m-holiday" class="ghost" style="flex:1;min-width:80px">Holiday</button>
+      <button id="m-vacation" class="ghost" style="flex:1;min-width:80px">Vacation</button>
+    </div>
+    <div class="actions" style="margin-top:14px">
+      <button id="m-save" class="primary">Save</button>
+      <button id="m-cancel" class="ghost">Cancel</button>
+    </div>
+  `;
+
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+
+  overlay.addEventListener('click', (e) => { if(e.target === overlay) overlay.remove(); });
+
+  const startInput = modal.querySelector('#m-start');
+  const endInput = modal.querySelector('#m-end');
+  const btnOff = modal.querySelector('#m-off');
+  const btnPresent = modal.querySelector('#m-present');
+  const btnAbsent = modal.querySelector('#m-absent');
+  const btnHoliday = modal.querySelector('#m-holiday');
+  const btnVacation = modal.querySelector('#m-vacation');
+  const saveBtn = modal.querySelector('#m-save');
+  const cancelBtn = modal.querySelector('#m-cancel');
+
+  let state = 'present';
+
+  function updateSelection() {
+    const buttons = [
+      { btn: btnOff, value: 'off' },
+      { btn: btnPresent, value: 'present' },
+      { btn: btnAbsent, value: 'absent' },
+      { btn: btnHoliday, value: 'holiday' },
+      { btn: btnVacation, value: 'vacation' }
+    ];
+    buttons.forEach(({ btn, value }) => {
+      btn.classList.toggle('primary', state === value);
+      btn.classList.toggle('ghost', state !== value);
+    });
+  }
+  updateSelection();
+
+  btnOff.addEventListener('click', () => { state = 'off'; updateSelection(); });
+  btnPresent.addEventListener('click', () => { state = 'present'; updateSelection(); });
+  btnAbsent.addEventListener('click', () => { state = 'absent'; updateSelection(); });
+  btnHoliday.addEventListener('click', () => { state = 'holiday'; updateSelection(); });
+  btnVacation.addEventListener('click', () => { state = 'vacation'; updateSelection(); });
+
+  cancelBtn.addEventListener('click', () => overlay.remove());
+  saveBtn.addEventListener('click', () => {
+    const startDate = startInput.value;
+    const endDate = endInput.value;
+    if(!startDate || !endDate) return;
+    if(startDate > endDate) {
+      alert('End date must be the same or after start date.');
+      return;
+    }
+    if(onSave) onSave({ start: startDate, end: endDate, status: state });
+    overlay.remove();
+  });
+}

@@ -1,6 +1,7 @@
 import { db } from '../firebase.js';
 import { collection, doc, setDoc, getDocs, getDoc } from 'https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js';
-import { showLoginModal, showAttendanceModal } from '../modal.js';
+import { showLoginModal, showAttendanceModal, showAttendanceRangeModal } from '../modal.js';
+import { saveAttendanceRange } from '../services/firestoreService.js';
 import {
   DayStatus,
   generateSessionDayObjects,
@@ -24,7 +25,27 @@ export function initAttendance(containerId = 'attendance-calendar') {
 
 export async function refreshAttendanceForUser(uid) {
   const calendarEl = document.getElementById('attendance-calendar');
+  const controlsEl = document.getElementById('attendance-controls');
   if(!calendarEl) return;
+  if(controlsEl) {
+    controlsEl.innerHTML = '';
+    if(uid) {
+      const bulkButton = document.createElement('button');
+      bulkButton.type = 'button';
+      bulkButton.className = 'primary';
+      bulkButton.textContent = 'Bulk mark range';
+      bulkButton.addEventListener('click', () => {
+        showAttendanceRangeModal({ onSave: async (payload) => {
+          await saveAttendanceRange(uid, payload.start, payload.end, payload.status);
+          await loadAttendance(uid);
+        }});
+      });
+      controlsEl.appendChild(bulkButton);
+    } else {
+      controlsEl.textContent = 'Sign in to use bulk range marking.';
+    }
+  }
+
   if(!uid) {
     showLoginModal({ onSuccess: () => {}, force: true });
     calendar.removeAllEvents();
