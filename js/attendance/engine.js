@@ -267,6 +267,29 @@ export function calculateSafeLeaves(sessionDays, requiredPercent = 75, opts = {}
   return { maxFutureAbsences, minimalFuturePresents, remaining };
 }
 
+export function calculateRecoveryPlan(sessionDays, requiredPercent = 75, opts = {}) {
+  const asOfISO = opts.asOfISO || todayISO();
+  const asOfDate = parseISOToLocalDate(asOfISO);
+  const soFar = calculateAttendanceFromSession(sessionDays, { uptoISO: asOfISO, treatUnmarkedAsAbsent: opts.treatUnmarkedAsAbsent === true });
+  const attended = soFar.present;
+  const totalSoFar = soFar.totalWorking;
+  const currentPercent = soFar.percent;
+  const remainingDays = sessionDays.filter(d => {
+    const cur = parseISOToLocalDate(d.date);
+    return cur && asOfDate && cur > asOfDate && isPotentialWorkingDay(d.status);
+  }).length;
+  const requiredDecimal = requiredPercent / 100;
+  const targetTotal = Math.ceil(requiredDecimal * (totalSoFar + remainingDays));
+  const neededFuturePresents = Math.max(0, targetTotal - attended);
+  return {
+    currentPercent,
+    remainingDays,
+    neededFuturePresents,
+    requiredPercent,
+    onTrack: remainingDays === 0 ? currentPercent >= requiredPercent : neededFuturePresents <= remainingDays
+  };
+}
+
 export function calculateSafeLeavesFromTotals(attended, totalWorking, requiredPercent = 75) {
   if (!totalWorking || totalWorking === 0) return 0;
   const maxTotalAllowed = Math.floor((attended * 100) / requiredPercent);

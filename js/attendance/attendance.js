@@ -8,6 +8,7 @@ import {
   calculateAttendanceFromSession,
   predictFinalAttendance,
   calculateSafeLeaves,
+  calculateRecoveryPlan,
   calculateAttendanceStreaks,
   countAttendanceNotes,
   getLastAttendanceNote
@@ -151,11 +152,15 @@ async function loadAttendance(uid) {
     const streaks = calculateAttendanceStreaks(sessionDays);
     const notesCount = countAttendanceNotes(sessionDays);
     const lastNote = getLastAttendanceNote(sessionDays);
+    const recovery = calculateRecoveryPlan(sessionDays, requiredPercent, { asOfISO: nowISO });
+    const recoveryText = recovery.remainingDays === 0
+      ? (recovery.onTrack ? `Goal met at ${recovery.currentPercent}%` : `Goal missed at ${recovery.currentPercent}%`) 
+      : `Recovery: need ${recovery.neededFuturePresents}/${recovery.remainingDays} future working days for ${requiredPercent}%`;
     const noteSummary = notesCount ? ` Notes ${notesCount}${lastNote ? `, last: "${lastNote.length > 40 ? `${lastNote.slice(0, 40)}...` : lastNote}"` : ''}.` : '';
     if(stats.totalWorking === 0) {
-      summaryEl.textContent = `No attendance recorded yet.${noteSummary}`;
+      summaryEl.textContent = `No attendance recorded yet. Smart insight: mark your first presence to start tracking recovery.${noteSummary}`;
     } else {
-      summaryEl.textContent = `Present ${stats.present}/${stats.totalWorking} — ${stats.percent}% (Predicted ${pred.predictedPercent}% — safe leaves left: ${safe.maxFutureAbsences}). Current streak ${streaks.current}, best ${streaks.best}.${noteSummary}`;
+      summaryEl.textContent = `Present ${stats.present}/${stats.totalWorking} — ${stats.percent}% (Predicted ${pred.predictedPercent}% — safe leaves left: ${safe.maxFutureAbsences}). Current streak ${streaks.current}, best ${streaks.best}. ${recoveryText}.${noteSummary}`;
     }
   }
 }

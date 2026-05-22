@@ -3,6 +3,14 @@ import { collection, query, orderBy, getDocs } from 'https://www.gstatic.com/fir
 import { countAttendanceRecords, calculateAttendancePercent, calculateSafeLeavesFromTotals, countAttendanceNotes, calculateAttendanceStreaks } from '../attendance/engine.js';
 import { formatLocalISO, parseISOToLocalDate } from '../utils/date.js';
 
+function getDashboardInsight(counts, requiredPercent = 75) {
+  if (counts.totalWorking === 0) return 'Smart insight: Start marking attendance to unlock recovery guidance.';
+  const percent = calculateAttendancePercent(counts.present, counts.totalWorking);
+  if (percent >= requiredPercent) return `Smart insight: On track for ${requiredPercent}% attendance.`;
+  const missing = Math.ceil((requiredPercent / 100) * counts.totalWorking - counts.present);
+  return `Smart insight: ${missing > 0 ? `Need ${missing} more present day${missing === 1 ? '' : 's'} to reach ${requiredPercent}%` : `Keep the pace to stay above ${requiredPercent}%`}.`;
+}
+
 export async function loadDashboard(uid) {
   console.log('Dashboard Loaded');
   if(!uid) {
@@ -128,10 +136,11 @@ async function loadAttendanceSummary(uid) {
     if(counts.vacation) extras.push(`${counts.vacation} Vacation`);
     const noteSummary = notesCount ? ` ${notesCount} note${notesCount === 1 ? '' : 's'}` : '';
     const streakSummary = ` Current streak ${streaks.current}, best ${streaks.best}.`;
+    const insight = getDashboardInsight(counts, 75);
 
     infoEl.textContent = counts.totalWorking === 0
       ? `No working days recorded yet.${noteSummary}${extras.length ? ' ' + extras.join(', ') : ''}`
-      : `Present ${counts.present}/${counts.totalWorking}. Safe leaves left: ${safeLeaves}.${streakSummary}${noteSummary}${extras.length ? ' ' + extras.join(', ') : ''}`;
+      : `Present ${counts.present}/${counts.totalWorking}. Safe leaves left: ${safeLeaves}.${streakSummary}${noteSummary}${extras.length ? ' ' + extras.join(', ') : ''} ${insight}`;
   } catch (err) {
     console.error(err);
   }
