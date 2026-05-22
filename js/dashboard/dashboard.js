@@ -78,8 +78,14 @@ async function loadAttendanceSummary(uid) {
     const percent = calculateAttendancePercent(counts.present, counts.totalWorking);
     percentEl.textContent = counts.totalWorking === 0 ? '--%' : `${percent}%`;
     const safeLeaves = calculateSafeLeavesFromTotals(counts.present, counts.totalWorking, 75);
+    const extras = [];
+    if(counts.off) extras.push(`${counts.off} Off`);
+    if(counts.holiday) extras.push(`${counts.holiday} Holiday`);
+    if(counts.vacation) extras.push(`${counts.vacation} Vacation`);
 
-    infoEl.textContent = counts.totalWorking === 0 ? 'No working days recorded yet.' : `Present ${counts.present}/${counts.totalWorking}. Safe leaves left: ${safeLeaves}`;
+    infoEl.textContent = counts.totalWorking === 0
+      ? `No working days recorded yet.${extras.length ? ' ' + extras.join(', ') : ''}`
+      : `Present ${counts.present}/${counts.totalWorking}. Safe leaves left: ${safeLeaves}.${extras.length ? ' ' + extras.join(', ') : ''}`;
   } catch (err) {
     console.error(err);
   }
