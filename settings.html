@@ -12,6 +12,7 @@
   <link rel="icon" href="favicon.png" type="image/png" />
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="css/global.css">
+  <link rel="stylesheet" href="css/spotlight.css">
 </head>
 <body>
   <button class="menu-toggle" type="button" aria-label="Open navigation">☰</button>
@@ -61,6 +62,39 @@
           <button id="seed-defaults" class="ghost">Seed Defaults</button>
           <div id="session-status" class="muted session-status"></div>
         </div>
+    <section class="widget spaced-section">
+      <h3>Spotlight Guide</h3>
+      <div class="settings-panel">
+        <p class="muted" style="margin-bottom:16px">
+          <strong>Quick Capture:</strong> Press <code style="background:rgba(255,255,255,0.06);padding:2px 6px;border-radius:4px;font-size:0.9em">Cmd+K</code> or <code style="background:rgba(255,255,255,0.06);padding:2px 6px;border-radius:4px;font-size:0.9em">Ctrl+K</code> to open Spotlight from anywhere.
+        </p>
+        
+        <h4 style="font-size:0.95rem;font-weight:600;margin:16px 0 8px;color:var(--text)">Supported Phrases</h4>
+        <ul style="margin:0;padding-left:20px;color:var(--secondary);font-size:0.9rem;line-height:1.8">
+          <li><strong>Dates:</strong> today, tomorrow, monday, tuesday, etc.</li>
+          <li><strong>Times:</strong> 5pm, 8:30am, 3:15 pm (optional with dates)</li>
+          <li><strong>Types:</strong> Automatically inferred from keywords</li>
+        </ul>
+
+        <h4 style="font-size:0.95rem;font-weight:600;margin:16px 0 8px;color:var(--text)">Examples</h4>
+        <ul style="margin:0;padding-left:20px;color:var(--secondary);font-size:0.9rem;line-height:1.8">
+          <li>"physics assignment tomorrow 5pm" → Task on tomorrow @ 5pm</li>
+          <li>"buy stylus nibs" → Reminder (no date needed)</li>
+          <li>"chemistry viva monday" → Exam on Monday</li>
+          <li>"meeting with prof thursday 2pm" → Event on Thursday @ 2pm</li>
+        </ul>
+
+        <h4 style="font-size:0.95rem;font-weight:600;margin:16px 0 8px;color:var(--text)">Best Practices</h4>
+        <ul style="margin:0;padding-left:20px;color:var(--secondary);font-size:0.9rem;line-height:1.8">
+          <li>Write naturally — parsing is forgiving</li>
+          <li>Include keywords: exam, task, meeting, remind, buy, etc.</li>
+          <li>Review parsed data before saving (edit if needed)</li>
+          <li>Dates auto-complete: "tomorrow", weekdays supported</li>
+        </ul>
+
+        <p style="margin-top:16px;padding:12px;background:rgba(77,163,255,0.1);border-radius:8px;color:var(--secondary);font-size:0.85rem">
+          <strong>💡 Tip:</strong> Spotlight integrates with your tasks, reminders, and events. Quick captures sync instantly to your dashboard.
+        </p>
       </div>
     </section>
   </main>

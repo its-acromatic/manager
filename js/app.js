@@ -4,8 +4,12 @@ import { waitForInitialAuth, subscribeAuth } from './firebase.js';
 import { showLoginModal } from './modal.js';
 import { initCalendar, refreshCalendarForUser } from './calendar/calendar.js';
 import { initAttendance, refreshAttendanceForUser } from './attendance/attendance.js';
+import { initSpotlight } from './spotlight/spotlight.js';
 
 initializeTheme();
+
+// Initialize Spotlight system globally
+initSpotlight();
 
 function waitForFullCalendar(timeout = 5000) {
 	return new Promise((resolve, reject) => {
@@ -57,6 +61,8 @@ waitForInitialAuth().then((initialUid) => {
 
 subscribeAuth((user) => {
 	const uid = user ? user.uid : null;
+	// Make current user available globally for Spotlight
+	window._currentUser = user;
 
 	if(uid) {
 		loadDashboard(uid);
