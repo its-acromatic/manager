@@ -83,8 +83,11 @@ if(dateElement) dateElement.textContent = today.toDateString();
 if ('serviceWorker' in navigator) {
 	window.addEventListener('load', async () => {
 		try {
-			await navigator.serviceWorker.register('/manager/sw.js');
+			const reg = await navigator.serviceWorker.register('/manager/sw.js');
 			console.log('Service Worker Registered');
+			if (reg) {
+				reg.update();
+			}
 		} catch (error) {
 			console.error('Service Worker Registration Failed:', error);
 		}
