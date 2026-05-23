@@ -244,6 +244,38 @@
   transform: translateY(0);
 }
 
+/* Floating Action Button */
+.spotlight-fab {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 56px;
+  height: 56px;
+  border: none;
+  border-radius: 50%;
+  background: #4da3ff;
+  color: white;
+  font-size: 1.4rem;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(77, 163, 255, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 200ms ease;
+  z-index: 9999;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.spotlight-fab:hover {
+  transform: scale(1.1);
+  box-shadow: 0 12px 32px rgba(77, 163, 255, 0.4);
+}
+
+.spotlight-fab:active {
+  transform: scale(0.95);
+}
+
 /* Mobile responsiveness */
 @media (max-width: 600px) {
   .spotlight-modal {
@@ -262,4 +294,23 @@
     right: 16px;
     bottom: 16px;
   }
+
+  .spotlight-fab {
+    bottom: 20px;
+    right: 16px;
+    width: 52px;
+    height: 52px;
+    font-size: 1.2rem;
+  }
 }
+
+@media (max-width: 400px) {
+  .spotlight-fab {
+    bottom: 16px;
+    right: 12px;
+    width: 48px;
+    height: 48px;
+    font-size: 1.1rem;
+  }
+}
+

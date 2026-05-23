@@ -4,7 +4,7 @@ import { waitForInitialAuth, subscribeAuth } from './firebase.js';
 import { showLoginModal } from './modal.js';
 import { initCalendar, refreshCalendarForUser } from './calendar/calendar.js';
 import { initAttendance, refreshAttendanceForUser } from './attendance/attendance.js';
-import { initSpotlight } from './spotlight/spotlight.js';
+import { initSpotlight, showSpotlightFAB, hideSpotlightFAB } from './spotlight/spotlight.js';
 
 initializeTheme();
 
@@ -65,6 +65,7 @@ subscribeAuth((user) => {
 	window._currentUser = user;
 
 	if(uid) {
+		showSpotlightFAB();
 		loadDashboard(uid);
 
 		if(hasCalendarPage) {
@@ -75,6 +76,7 @@ subscribeAuth((user) => {
 			refreshAttendanceForUser(uid);
 		}
 	} else {
+		hideSpotlightFAB();
 		loadDashboard(null);
 
 		if(hasCalendarPage) {

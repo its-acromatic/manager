@@ -6,6 +6,7 @@ import { saveSpotlightCapture } from '../services/spotlightService.js';
 
 let spotlightOpen = false;
 let currentParsed = null;
+let fabCreated = false;
 
 export function initSpotlight() {
   // Bind keyboard shortcut: Cmd+K or Ctrl+K
@@ -15,6 +16,33 @@ export function initSpotlight() {
       toggleSpotlight();
     }
   });
+}
+
+export function showSpotlightFAB() {
+  if (fabCreated) return;
+  createFloatingActionButton();
+  fabCreated = true;
+}
+
+export function hideSpotlightFAB() {
+  const fab = document.getElementById('spotlight-fab');
+  if (fab) fab.remove();
+  fabCreated = false;
+}
+
+function createFloatingActionButton() {
+  if (document.getElementById('spotlight-fab')) return;
+
+  const fab = document.createElement('button');
+  fab.id = 'spotlight-fab';
+  fab.className = 'spotlight-fab';
+  fab.type = 'button';
+  fab.title = 'Quick Capture (Cmd+K)';
+  fab.setAttribute('aria-label', 'Open quick capture');
+  fab.innerHTML = '✦';
+  fab.addEventListener('click', () => toggleSpotlight());
+  
+  document.body.appendChild(fab);
 }
 
 export function toggleSpotlight() {
