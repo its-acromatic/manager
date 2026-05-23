@@ -10,21 +10,42 @@ initializeTheme();
 function waitForFullCalendar(timeout = 5000) {
 	return new Promise((resolve, reject) => {
 		if(window.FullCalendar) return resolve();
+
 		const start = Date.now();
+
 		const iv = setInterval(() => {
-			if(window.FullCalendar) { clearInterval(iv); resolve(); }
-			if(Date.now() - start > timeout) { clearInterval(iv); reject(new Error('FullCalendar not loaded')); }
+			if(window.FullCalendar) {
+				clearInterval(iv);
+				resolve();
+			}
+
+			if(Date.now() - start > timeout) {
+				clearInterval(iv);
+				reject(new Error('FullCalendar not loaded'));
+			}
 		}, 100);
 	});
 }
 
-// Initialize UI components when FullCalendar is ready (calendar modules rely on it)
-waitForFullCalendar().then(() => {
-	initCalendar('calendar');
-	initAttendance('attendance-calendar');
-}).catch((err) => {
-	console.warn('FullCalendar not available:', err);
-});
+// Only initialize calendar-related systems on pages that actually use them
+const hasCalendarPage = document.getElementById('calendar');
+const hasAttendancePage = document.getElementById('attendance-calendar');
+
+if(hasCalendarPage || hasAttendancePage) {
+	waitForFullCalendar()
+		.then(() => {
+			if(hasCalendarPage) {
+				initCalendar('calendar');
+			}
+
+			if(hasAttendancePage) {
+				initAttendance('attendance-calendar');
+			}
+		})
+		.catch((err) => {
+			console.warn('FullCalendar not available:', err);
+		});
+}
 
 // handle initial auth and subsequent changes
 waitForInitialAuth().then((initialUid) => {
@@ -36,14 +57,27 @@ waitForInitialAuth().then((initialUid) => {
 
 subscribeAuth((user) => {
 	const uid = user ? user.uid : null;
+
 	if(uid) {
 		loadDashboard(uid);
-		refreshCalendarForUser(uid);
-		refreshAttendanceForUser(uid);
+
+		if(hasCalendarPage) {
+			refreshCalendarForUser(uid);
+		}
+
+		if(hasAttendancePage) {
+			refreshAttendanceForUser(uid);
+		}
 	} else {
 		loadDashboard(null);
-		refreshCalendarForUser(null);
-		refreshAttendanceForUser(null);
+
+		if(hasCalendarPage) {
+			refreshCalendarForUser(null);
+		}
+
+		if(hasAttendancePage) {
+			refreshAttendanceForUser(null);
+		}
 	}
 });
 
@@ -58,18 +92,29 @@ function initMobileNav() {
 	};
 
 	if(menuToggle && sidebar) {
-		menuToggle.addEventListener('click', () => sidebar.classList.toggle('open'));
+		menuToggle.addEventListener('click', () => {
+			sidebar.classList.toggle('open');
+		});
 	}
 
 	if(sidebarClose) {
 		sidebarClose.addEventListener('click', closeSidebar);
 	}
 
-	navLinks.forEach((link) => link.addEventListener('click', closeSidebar));
+	navLinks.forEach((link) => {
+		link.addEventListener('click', closeSidebar);
+	});
 
 	document.addEventListener('click', (event) => {
 		if(!sidebar?.classList.contains('open')) return;
-		if(event.target.closest('.sidebar') || event.target.closest('.menu-toggle')) return;
+
+		if(
+			event.target.closest('.sidebar') ||
+			event.target.closest('.menu-toggle')
+		) {
+			return;
+		}
+
 		closeSidebar();
 	});
 }
@@ -78,17 +123,22 @@ initMobileNav();
 
 const today = new Date();
 const dateElement = document.getElementById('today-date');
-if(dateElement) dateElement.textContent = today.toDateString();
 
-if ('serviceWorker' in navigator) {
+if(dateElement) {
+	dateElement.textContent = today.toDateString();
+}
+
+if('serviceWorker' in navigator) {
 	window.addEventListener('load', async () => {
 		try {
 			const reg = await navigator.serviceWorker.register('/manager/sw.js');
+
 			console.log('Service Worker Registered');
-			if (reg) {
+
+			if(reg) {
 				reg.update();
 			}
-		} catch (error) {
+		} catch(error) {
 			console.error('Service Worker Registration Failed:', error);
 		}
 	});
