@@ -1,4 +1,4 @@
-const CACHE_NAME = 'manager-cache-v4.5';
+const CACHE_NAME = 'manager-cache-v4.5.1';
 
 const ASSETS = [
   '/manager/',
