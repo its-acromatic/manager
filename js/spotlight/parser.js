@@ -2,10 +2,10 @@
 // Detects type, date, time, and keywords from user input
 
 const WEEKDAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
-const KEYWORDS_TASK = ['task', 'todo', 'do', 'need', 'finish', 'complete', 'submit'];
-const KEYWORDS_EVENT = ['meeting', 'call', 'interview', 'conference', 'webinar', 'presentation'];
-const KEYWORDS_EXAM = ['exam', 'test', 'viva', 'quiz', 'practical', 'lab'];
-const KEYWORDS_REMINDER = ['remind', 'remember', 'don\'t forget', 'buy', 'call'];
+const KEYWORDS_TASK = ['task', 'todo', 'do', 'homework', 'project', 'work', 'submit', 'finish', 'complete'];
+const KEYWORDS_EVENT = ['meeting', 'call', 'appointment', 'dinner', 'lunch', 'concert', 'show', 'party', 'conference', 'webinar', 'presentation', 'interview', 'workshop', 'class', 'lecture', 'event', 'session', 'gathering'];
+const KEYWORDS_EXAM = ['exam', 'test', 'viva', 'quiz', 'practical', 'lab', 'assignment'];
+const KEYWORDS_REMINDER = ['remind', 'remember', 'don\'t forget', 'buy', 'call', 'get', 'pick up', 'return'];
 
 export function parseSpotlightInput(rawText) {
   if (!rawText || typeof rawText !== 'string') {
