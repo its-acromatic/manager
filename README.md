@@ -16,3 +16,12 @@ How to run locally:
 Notes:
 - Attendance is not placeholder data — the dashboard reads real attendance documents from Firestore to compute percentages.
 - Calendar events are stored per-user and editable.
+
+
+Updates:
+Phase 1 (Foundational): Spotlight system + lightweight parsing logic
+Phase 2: Task system + Firebase integration
+Phase 3: Focus Mode page + timer logic
+Phase 4: Advanced theme engine + persistence
+Phase 5: Smart notifications infrastructure
+Phase 6: Dashboard improvements + refinements

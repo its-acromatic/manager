@@ -2,6 +2,7 @@ import { db } from '../firebase.js';
 import { collection, query, orderBy, getDocs } from 'https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js';
 import { countAttendanceRecords, calculateAttendancePercent, calculateSafeLeavesFromTotals, countAttendanceNotes, calculateAttendanceStreaks } from '../attendance/engine.js';
 import { formatLocalISO, parseISOToLocalDate } from '../utils/date.js';
+import { fetchTasks } from '../services/taskService.js';
 
 function getDashboardInsight(counts, requiredPercent = 75) {
   if (counts.totalWorking === 0) return 'Smart insight: Start marking attendance to unlock recovery guidance.';
@@ -25,6 +26,7 @@ export async function loadDashboard(uid) {
 
   await loadUpcomingEvents(uid);
   await loadAttendanceSummary(uid);
+  await loadDashboardTasks(uid);
 }
 
 async function loadUpcomingEvents(uid) {
@@ -166,6 +168,49 @@ async function loadAttendanceSummary(uid) {
     infoEl.textContent = counts.totalWorking === 0
       ? `No working days recorded yet.${noteSummary}${extras.length ? ' ' + extras.join(', ') : ''}`
       : `Present ${counts.present}/${counts.totalWorking}. Safe leaves left: ${safeLeaves}.${streakSummary}${noteSummary}${extras.length ? ' ' + extras.join(', ') : ''} ${insight}`;
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+async function loadDashboardTasks(uid) {
+  const tasksList = document.getElementById('dashboard-tasks-list');
+  if(!tasksList) return;
+
+  try {
+    const tasks = await fetchTasks(uid);
+    const todayISO = formatLocalISO(new Date());
+    
+    // Get pending tasks (not completed, due today or later)
+    const pending = tasks.filter(t => !t.completed && t.dueDate);
+    const sorted = pending.sort((a, b) => (a.dueDate || '').localeCompare(b.dueDate || ''));
+    const limited = sorted.slice(0, 5);
+
+    if(limited.length === 0) {
+      tasksList.innerHTML = '<li style="color:var(--secondary);text-align:center;padding:20px">No pending tasks</li>';
+      return;
+    }
+
+    tasksList.innerHTML = '';
+    limited.forEach(task => {
+      const li = document.createElement('li');
+      li.className = 'dashboard-task-item';
+      
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.checked = task.completed;
+      checkbox.addEventListener('change', async () => {
+        // Quick complete - navigate to tasks page for full update
+        window.location.href = 'tasks.html';
+      });
+
+      const span = document.createElement('span');
+      span.textContent = task.title;
+
+      li.appendChild(checkbox);
+      li.appendChild(span);
+      tasksList.appendChild(li);
+    });
   } catch (err) {
     console.error(err);
   }

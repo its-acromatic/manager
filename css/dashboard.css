@@ -63,3 +63,56 @@ textarea {
 .card:hover {
   transform: translateY(-1px);
 }
+
+/* Tasks widget styling */
+.tasks-widget-body {
+  display: flex;
+  flex-direction: column;
+}
+
+#dashboard-tasks-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.dashboard-task-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(77, 163, 255, 0.05);
+  border: 1px solid rgba(77, 163, 255, 0.1);
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+.dashboard-task-item:hover {
+  background: rgba(77, 163, 255, 0.1);
+  border-color: rgba(77, 163, 255, 0.2);
+}
+
+.dashboard-task-item input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--primary);
+  flex-shrink: 0;
+}
+
+.dashboard-task-item span {
+  flex: 1;
+  color: var(--text);
+  word-break: break-word;
+}
+
+.dashboard-task-item span.muted {
+  color: var(--secondary);
+  font-size: 0.8rem;
+}
+

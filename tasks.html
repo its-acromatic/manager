@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tasks — Manager</title>
+  <link rel="stylesheet" href="css/global.css">
+  <link rel="stylesheet" href="css/tasks.css">
+  <link rel="stylesheet" href="css/spotlight.css">
+</head>
+<body>
+  <nav class="sidebar">
+    <div class="sidebar-header">
+      <h1>Manager</h1>
+      <button class="sidebar-close" aria-label="Close menu">✕</button>
+    </div>
+    <nav>
+      <a href="index.html">Dashboard</a>
+      <a href="attendance.html">Attendance</a>
+      <a href="calendar.html">Calendar</a>
+      <a href="tasks.html" class="active">Tasks</a>
+      <a href="analytics.html">Analytics</a>
+      <a href="settings.html">Settings</a>
+    </nav>
+  </nav>
+
+  <button class="menu-toggle" aria-label="Open menu">☰</button>
+
+  <main class="container">
+    <div class="page-header">
+      <h1>Tasks</h1>
+      <p id="tasks-summary" style="color:var(--secondary);margin-top:4px">Loading...</p>
+    </div>
+
+    <div class="tasks-filters">
+      <button class="filter-btn active" data-filter="all">All</button>
+      <button class="filter-btn" data-filter="today">Today</button>
+      <button class="filter-btn" data-filter="upcoming">Upcoming</button>
+      <button class="filter-btn" data-filter="completed">Completed</button>
+      <button class="filter-btn" data-filter="overdue">Overdue</button>
+    </div>
+
+    <div id="tasks-container" class="tasks-container">
+      <div style="text-align:center;color:var(--secondary);padding:40px">Loading tasks...</div>
+    </div>
+  </main>
+
+  <script type="module" src="js/app.js"></script>
+  <script type="module">
+    import { initTasks, loadTasks } from './js/tasks/tasks.js';
+    import { subscribeAuth } from './js/firebase.js';
+
+    // Mobile nav
+    function initMobileNav() {
+      const menuToggle = document.querySelector('.menu-toggle');
+      const sidebar = document.querySelector('.sidebar');
+      const sidebarClose = document.querySelector('.sidebar-close');
+
+      const closeSidebar = () => {
+        if(sidebar) sidebar.classList.remove('open');
+      };
+
+      if(menuToggle && sidebar) {
+        menuToggle.addEventListener('click', () => sidebar.classList.add('open'));
+      }
+      if(sidebarClose) sidebarClose.addEventListener('click', closeSidebar);
+      document.addEventListener('click', (e) => {
+        if(sidebar && sidebar.classList.contains('open') && 
+           !sidebar.contains(e.target) && e.target !== menuToggle) {
+          closeSidebar();
+        }
+      });
+    }
+
+    initMobileNav();
+    initTasks();
+
+    subscribeAuth((user) => {
+      const uid = user ? user.uid : null;
+      if(uid) {
+        loadTasks(uid);
+      }
+    });
+  </script>
+</body>
+</html>
