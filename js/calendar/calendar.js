@@ -70,19 +70,43 @@ export async function refreshCalendarForUser(uid) {
     const ev = info.event;
     // fetch full doc to get all fields
     if(ev.id) {
-      const docRef = doc(db, 'users', uid, 'events', ev.id);
-      const snap = await getDoc(docRef);
-      const data = snap.exists() ? snap.data() : { title: ev.title, date: ev.startStr };
-      const existing = { id: ev.id, title: data.title || ev.title, description: data.description || '', startTime: data.startTime || '', endTime: data.endTime || '', date: data.date || (ev.startStr && ev.startStr.split('T')[0]) };
-      showEventModal({ date: existing.date, existing: existing, onSave: async (payload) => {
-        if(existing.id) {
-          await updateDoc(doc(db, 'users', uid, 'events', existing.id), { title: payload.title, date: payload.date, description: payload.description || '', startTime: payload.startTime || '', endTime: payload.endTime || '' });
-        }
-        await loadEvents(uid);
-      }, onDelete: async (id) => {
-        if(id) await deleteDoc(doc(db, 'users', uid, 'events', id));
-        await loadEvents(uid);
-      }});
+      const isSpotlightEvent = ev.extendedProps?.isSpotlight;
+      
+      if(isSpotlightEvent) {
+        // Handle Spotlight captured event
+        const docRef = doc(db, 'users', uid, 'captures', ev.id);
+        const snap = await getDoc(docRef);
+        const data = snap.exists() ? snap.data() : { title: ev.title, dueDate: ev.startStr };
+        const dateStr = data.dueDate || (ev.startStr && ev.startStr.split('T')[0]);
+        const existing = { 
+          id: ev.id, 
+          title: data.title || ev.title, 
+          date: dateStr,
+          isSpotlight: true
+        };
+        showEventModal({ date: existing.date, existing: existing, onSave: async (payload) => {
+          // Spotlight events are read-only in modal, no edit
+          await loadEvents(uid);
+        }, onDelete: async (id) => {
+          if(id) await deleteDoc(doc(db, 'users', uid, 'captures', id));
+          await loadEvents(uid);
+        }});
+      } else {
+        // Handle manual event
+        const docRef = doc(db, 'users', uid, 'events', ev.id);
+        const snap = await getDoc(docRef);
+        const data = snap.exists() ? snap.data() : { title: ev.title, date: ev.startStr };
+        const existing = { id: ev.id, title: data.title || ev.title, description: data.description || '', startTime: data.startTime || '', endTime: data.endTime || '', date: data.date || (ev.startStr && ev.startStr.split('T')[0]) };
+        showEventModal({ date: existing.date, existing: existing, onSave: async (payload) => {
+          if(existing.id) {
+            await updateDoc(doc(db, 'users', uid, 'events', existing.id), { title: payload.title, date: payload.date, description: payload.description || '', startTime: payload.startTime || '', endTime: payload.endTime || '' });
+          }
+          await loadEvents(uid);
+        }, onDelete: async (id) => {
+          if(id) await deleteDoc(doc(db, 'users', uid, 'events', id));
+          await loadEvents(uid);
+        }});
+      }
     }
   });
 
@@ -117,8 +141,7 @@ async function loadEvents(uid) {
         const m = String(minute || 0).padStart(2, '0');
         start = `${data.dueDate}T${h}:${m}`;
       }
-      const ev = { id: d.id, title: data.title, start };
-      if(data.priority) ev.extendedProps = { ...ev.extendedProps, priority: data.priority };
+      const ev = { id: d.id, title: data.title, start, extendedProps: { isSpotlight: true } };
       calendar.addEvent(ev);
     }
   });
