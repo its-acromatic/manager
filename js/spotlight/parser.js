@@ -64,10 +64,11 @@ export function parseSpotlightInput(rawText) {
   WEEKDAYS.forEach(day => {
     title = title.replace(day, '');
   });
-  title = title.replace(/tomorrow|today|am|pm/gi, '');
+  // Remove full time match first (includes am/pm), then other keywords
   if (timeMatch) {
     title = title.replace(timeMatch[0], '');
   }
+  title = title.replace(/tomorrow|today/gi, '');
   title = title.replace(/\s+/g, ' ').trim();
 
   // Capitalize first letter
