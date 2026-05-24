@@ -56,7 +56,9 @@ export function parseSpotlightInput(rawText) {
   } else if (KEYWORDS_EXAM.some(kw => text.includes(kw))) {
     type = 'exam';
   } else if (KEYWORDS_REMINDER.some(kw => text.includes(kw))) {
-    type = 'reminder';
+    // Only classify as reminder if NO specific time is set
+    // If there's a time, it's a scheduled task, not just a reminder
+    type = time ? 'task' : 'reminder';
   }
 
   // Extract title (remove date/time keywords for cleaner display)
