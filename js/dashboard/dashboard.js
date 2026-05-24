@@ -35,11 +35,29 @@ async function loadUpcomingEvents(uid) {
   upcomingList.innerHTML = 'Loading...';
 
   try {
+    const events = [];
+
+    // Load manual calendar events
     const eventsCol = collection(db, 'users', uid, 'events');
     const q = query(eventsCol, orderBy('date'));
     const snapshot = await getDocs(q);
-    const events = [];
-    snapshot.forEach(doc => events.push({ id: doc.id, ...doc.data() }));
+    snapshot.forEach(doc => events.push({ id: doc.id, ...doc.data(), source: 'manual' }));
+
+    // Load Spotlight event captures
+    const capturesCol = collection(db, 'users', uid, 'captures');
+    const captureSnapshot = await getDocs(capturesCol);
+    captureSnapshot.forEach(doc => {
+      const data = doc.data();
+      if(data.type === 'event' && data.dueDate) {
+        events.push({
+          id: doc.id,
+          title: data.title,
+          date: data.dueDate,
+          startTime: data.time ? `${String(data.time.hour).padStart(2, '0')}:${String(data.time.minute || 0).padStart(2, '0')}` : null,
+          source: 'spotlight'
+        });
+      }
+    });
 
     const todayISO = formatLocalISO(new Date());
     const normalizeDateOnly = (value) => {
@@ -53,6 +71,13 @@ async function loadUpcomingEvents(uid) {
       ...ev,
       normalizedDate: normalizeDateOnly(ev.date)
     }));
+
+    // Sort by date
+    normalizedEvents.sort((a, b) => {
+      const aDate = a.normalizedDate || '';
+      const bDate = b.normalizedDate || '';
+      return aDate.localeCompare(bDate);
+    });
 
     const todayEvents = normalizedEvents.filter(ev => ev.normalizedDate === todayISO);
     const upcomingEvents = normalizedEvents.filter(ev => ev.normalizedDate && ev.normalizedDate > todayISO).slice(0, 3);
