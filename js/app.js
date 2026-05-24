@@ -1,10 +1,11 @@
 import { loadDashboard } from './dashboard/dashboard.js';
-import { initializeTheme } from './theme.js';
+import { initializeTheme, applyTheme } from './theme.js';
 import { waitForInitialAuth, subscribeAuth } from './firebase.js';
 import { showLoginModal } from './modal.js';
 import { initCalendar, refreshCalendarForUser } from './calendar/calendar.js';
 import { initAttendance, refreshAttendanceForUser } from './attendance/attendance.js';
 import { initSpotlight, showSpotlightFAB, hideSpotlightFAB } from './spotlight/spotlight.js';
+import { fetchSessionSettings } from './services/firestoreService.js';
 
 initializeTheme();
 
@@ -59,7 +60,7 @@ waitForInitialAuth().then((initialUid) => {
 	}
 });
 
-subscribeAuth((user) => {
+subscribeAuth(async (user) => {
 	const uid = user ? user.uid : null;
 	// Make current user available globally for Spotlight
 	window._currentUser = user;
@@ -74,6 +75,15 @@ subscribeAuth((user) => {
 
 		if(hasAttendancePage) {
 			refreshAttendanceForUser(uid);
+		}
+
+		try {
+			const settings = await fetchSessionSettings(uid);
+			if (settings?.theme) {
+				applyTheme(settings.theme);
+			}
+		} catch (err) {
+			console.warn('Unable to load theme from user settings:', err);
 		}
 	} else {
 		hideSpotlightFAB();

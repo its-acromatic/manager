@@ -73,10 +73,11 @@ export async function fetchSessionSettings(uid) {
 export async function saveSessionSettings(uid, settings) {
   if (!uid || !settings) return;
   await setDoc(settingsDoc(uid), {
-    start: settings.start,
-    end: settings.end,
-    requiredPercent: settings.requiredPercent
-  });
+    ...(settings.start !== undefined ? { start: settings.start } : {}),
+    ...(settings.end !== undefined ? { end: settings.end } : {}),
+    ...(settings.requiredPercent !== undefined ? { requiredPercent: settings.requiredPercent } : {}),
+    ...(settings.theme !== undefined ? { theme: settings.theme } : {})
+  }, { merge: true });
 }
 
 export async function fetchEvents(uid) {

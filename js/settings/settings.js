@@ -1,6 +1,7 @@
 import { subscribeAuth } from '../firebase.js';
 import { refreshAttendanceForUser } from '../attendance/attendance.js';
 import { fetchSessionSettings, saveSessionSettings, seedAttendanceRange } from '../services/firestoreService.js';
+import { applyTheme, getStoredTheme } from '../theme.js';
 import { todayISO } from '../utils/date.js';
 
 const startEl = document.getElementById('session-start');
@@ -9,8 +10,47 @@ const reqEl = document.getElementById('required-percent');
 const saveBtn = document.getElementById('save-session');
 const seedBtn = document.getElementById('seed-defaults');
 const statusEl = document.getElementById('session-status');
+const themeStatusEl = document.getElementById('theme-status');
+const themeOptions = Array.from(document.querySelectorAll('input[name="theme-option"]'));
 
 let currentUid = null;
+
+function setThemeSelection(themeName) {
+  themeOptions.forEach((option) => {
+    option.checked = option.value === themeName;
+  });
+}
+
+const initialTheme = getStoredTheme();
+setThemeSelection(initialTheme);
+applyTheme(initialTheme);
+
+async function persistTheme(themeName) {
+  if (!themeName) return;
+  applyTheme(themeName);
+  setThemeSelection(themeName);
+  localStorage.setItem('manager-theme', themeName);
+
+  if (currentUid) {
+    try {
+      await saveSessionSettings(currentUid, { theme: themeName });
+      if (themeStatusEl) themeStatusEl.textContent = `Theme saved: ${themeName}`;
+    } catch (err) {
+      console.error('Unable to save theme preference', err);
+      if (themeStatusEl) themeStatusEl.textContent = 'Theme saved locally. Sign in to persist across devices.';
+    }
+  }
+}
+
+if (themeOptions.length) {
+  themeOptions.forEach((option) => {
+    option.addEventListener('change', () => {
+      if (option.checked) {
+        persistTheme(option.value);
+      }
+    });
+  });
+}
 
 subscribeAuth(async (user) => {
   if(!user) {
@@ -23,8 +63,8 @@ subscribeAuth(async (user) => {
     return;
   }
   currentUid = user.uid;
-  if(saveBtn) saveBtn.disabled = false;
-  if(statusEl) statusEl.textContent = '';
+  if (saveBtn) saveBtn.disabled = false;
+  if (statusEl) statusEl.textContent = '';
   // load settings
   const settings = await fetchSessionSettings(currentUid);
   const defaultStart = todayISO();
@@ -32,6 +72,9 @@ subscribeAuth(async (user) => {
   startEl.value = settings?.start || defaultStart;
   endEl.value = settings?.end || defaultEnd;
   reqEl.value = settings?.requiredPercent || 75;
+  const themeName = settings?.theme || getStoredTheme();
+  setThemeSelection(themeName);
+  applyTheme(themeName);
 });
 
 if(saveBtn) saveBtn.addEventListener('click', async () => {
