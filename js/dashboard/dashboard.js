@@ -179,14 +179,20 @@ async function loadDashboardTasks(uid) {
 
   try {
     const tasks = await fetchTasks(uid);
-    const todayISO = formatLocalISO(new Date());
-    
-    // Get pending tasks (not completed, due today or later)
-    const pending = tasks.filter(t => !t.completed && t.dueDate);
-    const sorted = pending.sort((a, b) => (a.dueDate || '').localeCompare(b.dueDate || ''));
+
+    // Get pending tasks (not completed), include undated tasks too
+    const pending = tasks.filter(t => !t.completed);
+    const sorted = pending.sort((a, b) => {
+      if (a.dueDate && b.dueDate) {
+        return a.dueDate.localeCompare(b.dueDate);
+      }
+      if (a.dueDate) return -1;
+      if (b.dueDate) return 1;
+      return a.title.localeCompare(b.title);
+    });
     const limited = sorted.slice(0, 5);
 
-    if(limited.length === 0) {
+    if (limited.length === 0) {
       tasksList.innerHTML = '<li style="color:var(--secondary);text-align:center;padding:20px">No pending tasks</li>';
       return;
     }

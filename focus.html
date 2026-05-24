@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Focus Mode — Manager</title>
+  <link rel="stylesheet" href="css/global.css">
+  <link rel="stylesheet" href="css/focus.css">
+  <link rel="stylesheet" href="css/spotlight.css">
+</head>
+<body class="focus-mode-page">
+  <button class="menu-toggle" type="button" aria-label="Open navigation">☰</button>
+  <aside class="sidebar">
+    <h1 class="logo">Manager</h1>
+    <button class="sidebar-close" type="button" aria-label="Close navigation">×</button>
+    <nav>
+      <a href="index.html">Dashboard</a>
+      <a href="calendar.html">Calendar</a>
+      <a href="attendance.html">Attendance</a>
+      <a href="tasks.html">Tasks</a>
+      <a href="focus.html" class="active">Focus</a>
+      <a href="analytics.html">Analytics</a>
+      <a href="settings.html">Settings</a>
+    </nav>
+  </aside>
+  <div class="focus-backdrop" id="focus-backdrop"></div>
+
+  <main class="container focus-container">
+    <section class="focus-card">
+      <div class="focus-headline">
+        <div>
+          <p class="eyebrow">Focus Mode</p>
+          <h1>Deep work in a quiet space</h1>
+        </div>
+        <span class="focus-tag" id="focus-mode-indicator">Pomodoro</span>
+      </div>
+
+      <p class="muted focus-description">Minimal, cinematic and calm. Tap start and let the timer hold the pace.</p>
+
+      <div class="focus-action-row">
+        <button id="focus-fullscreen" class="ghost">Enter immersive mode</button>
+      </div>
+
+      <div class="focus-summary">
+        <div class="summary-block">
+          <label>Session label</label>
+          <input id="focus-label" type="text" placeholder="Example: Read chapter 4, Draft report, Study chemistry" autocomplete="off" />
+        </div>
+
+        <div class="summary-block">
+          <label>Task to focus</label>
+          <select id="focus-task">
+            <option value="">-- No task selected --</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="session-types">
+        <button class="session-btn active" data-type="work" data-min="25">Work</button>
+        <button class="session-btn" data-type="short" data-min="5">Short</button>
+        <button class="session-btn" data-type="long" data-min="15">Long</button>
+        <button class="session-btn" data-type="free" data-min="30">Free</button>
+      </div>
+
+      <div class="free-settings" id="free-settings">
+        <label for="focus-free-minutes">Free timer</label>
+        <input id="focus-free-minutes" type="number" min="1" max="240" value="30" />
+      </div>
+
+      <div class="timer-display" id="focus-timer">25:00</div>
+      <div class="timer-subtext" id="focus-session-label-preview">Optional session label and task are quiet anchors; leave either blank to work freely.</div>
+
+      <div class="timer-actions">
+        <button id="focus-start" class="primary">Start</button>
+        <button id="focus-pause" class="ghost">Pause</button>
+        <button id="focus-reset" class="ghost">Reset</button>
+      </div>
+
+      <div class="session-stats" id="focus-stats">Sessions completed: 0</div>
+    </section>
+
+    <aside class="reminder-panel">
+      <div class="panel-header">
+        <h2>Quiet reminders</h2>
+        <p class="muted">A subdued view of the tasks and events that matter today.</p>
+      </div>
+      <div id="focus-reminders" class="reminder-list"></div>
+    </aside>
+  </main>
+
+  <script type="module" src="js/app.js"></script>
+  <script type="module" src="js/focus/focus.js"></script>
+</body>
+</html>
