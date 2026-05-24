@@ -43,20 +43,21 @@ export async function loadTasks(uid) {
     const today = normalized.filter(t => t.normalizedDate === todayISO && !t.completed);
     const upcoming = normalized.filter(t => t.normalizedDate && t.normalizedDate > todayISO && !t.completed);
     const overdue = normalized.filter(t => t.normalizedDate && t.normalizedDate < todayISO && !t.completed);
+    const noDate = normalized.filter(t => !t.normalizedDate && !t.completed);
     const completed = normalized.filter(t => t.completed);
 
     // Summary
-    const totalPending = today.length + upcoming.length + overdue.length;
+    const totalPending = today.length + upcoming.length + overdue.length + noDate.length;
     summary.textContent = `${totalPending} pending • ${completed.length} completed`;
 
     // Filter and render
     let toShow = [];
     switch(currentFilter) {
       case 'today': toShow = today; break;
-      case 'upcoming': toShow = upcoming; break;
+      case 'upcoming': toShow = [...upcoming, ...noDate]; break;
       case 'overdue': toShow = overdue; break;
       case 'completed': toShow = completed; break;
-      default: toShow = [...overdue, ...today, ...upcoming, ...completed];
+      default: toShow = [...overdue, ...today, ...upcoming, ...noDate, ...completed];
     }
 
     if(toShow.length === 0) {
@@ -76,6 +77,9 @@ export async function loadTasks(uid) {
       }
       if(upcoming.length > 0) {
         renderSection(container, 'Upcoming', upcoming, uid);
+      }
+      if(noDate.length > 0) {
+        renderSection(container, 'No Date Set', noDate, uid);
       }
       if(completed.length > 0) {
         renderSection(container, 'Completed', completed, uid);
