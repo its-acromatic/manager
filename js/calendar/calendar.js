@@ -40,7 +40,8 @@ export async function refreshCalendarForUser(uid) {
     snapCaptures.forEach(d => {
       const data = d.data();
       if(data.type === 'event') {
-        dayEvents.push({ id: d.id, ...data, fromSpotlight: true });
+        const startTime = data.time ? `${String(data.time.hour).padStart(2, '0')}:${String(data.time.minute || 0).padStart(2, '0')}` : '';
+        dayEvents.push({ id: d.id, title: data.title, date: data.dueDate, startTime: startTime, fromSpotlight: true });
       }
     });
 
@@ -52,16 +53,36 @@ export async function refreshCalendarForUser(uid) {
         }});
       },
       onOpenEvent: (ev) => {
-        // open the event edit modal
-        showEventModal({ date: ev.date, existing: ev, onSave: async (payload) => {
-          if(ev.id) {
-            await updateDoc(doc(db, 'users', uid, 'events', ev.id), { title: payload.title, date: payload.date, description: payload.description || '', startTime: payload.startTime || '', endTime: payload.endTime || '' });
-          }
-          await loadEvents(uid);
-        }, onDelete: async (id) => {
-          if(id) await deleteDoc(doc(db, 'users', uid, 'events', id));
-          await loadEvents(uid);
-        }});
+        // Handle both manual and Spotlight events
+        if(ev.fromSpotlight) {
+          // Spotlight event - read-only
+          const existing = {
+            id: ev.id,
+            title: ev.title,
+            date: ev.date,
+            startTime: ev.startTime || '',
+            endTime: '',
+            description: '',
+            isSpotlight: true
+          };
+          showEventModal({ date: ev.date, existing: existing, onSave: async (payload) => {
+            await loadEvents(uid);
+          }, onDelete: async (id) => {
+            if(id) await deleteDoc(doc(db, 'users', uid, 'captures', id));
+            await loadEvents(uid);
+          }});
+        } else {
+          // Manual event - editable
+          showEventModal({ date: ev.date, existing: ev, onSave: async (payload) => {
+            if(ev.id) {
+              await updateDoc(doc(db, 'users', uid, 'events', ev.id), { title: payload.title, date: payload.date, description: payload.description || '', startTime: payload.startTime || '', endTime: payload.endTime || '' });
+            }
+            await loadEvents(uid);
+          }, onDelete: async (id) => {
+            if(id) await deleteDoc(doc(db, 'users', uid, 'events', id));
+            await loadEvents(uid);
+          }});
+        }
       }
     });
   });
@@ -78,10 +99,22 @@ export async function refreshCalendarForUser(uid) {
         const snap = await getDoc(docRef);
         const data = snap.exists() ? snap.data() : { title: ev.title, dueDate: ev.startStr };
         const dateStr = data.dueDate || (ev.startStr && ev.startStr.split('T')[0]);
+        
+        // Convert time object to startTime string (HH:MM format)
+        let startTime = '';
+        if(data.time) {
+          const h = String(data.time.hour).padStart(2, '0');
+          const m = String(data.time.minute || 0).padStart(2, '0');
+          startTime = `${h}:${m}`;
+        }
+        
         const existing = { 
           id: ev.id, 
           title: data.title || ev.title, 
           date: dateStr,
+          startTime: startTime,
+          endTime: '',
+          description: '',
           isSpotlight: true
         };
         showEventModal({ date: existing.date, existing: existing, onSave: async (payload) => {

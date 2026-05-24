@@ -70,27 +70,31 @@ export function showEventModal({ date, existing = null, onSave, onDelete } = {})
   const overlay = createOverlay();
   const modal = document.createElement('div');
   modal.className = 'modal';
+  const isReadOnly = existing && existing.isSpotlight;
+  const saveButtonText = isReadOnly ? 'Close' : 'Save';
+  const saveButtonClass = isReadOnly ? 'ghost' : 'primary';
+  
   modal.innerHTML = `
-    <h3>${existing ? 'Edit Event' : 'Add Event'}</h3>
+    <h3>${existing ? 'Event Details' : 'Add Event'}</h3>
     <label style="color:var(--secondary)">Date</label>
-    <input id="m-date" type="date" value="${date || ''}" />
+    <input id="m-date" type="date" value="${date || ''}" ${isReadOnly ? 'disabled' : ''} />
     <label style="color:var(--secondary)">Title</label>
-    <input id="m-title" type="text" value="${existing ? existing.title : ''}" />
+    <input id="m-title" type="text" value="${existing ? existing.title : ''}" ${isReadOnly ? 'disabled' : ''} />
     <div class="row">
       <div style="flex:1">
         <label style="color:var(--secondary)">Start time</label>
-        <input id="m-start" type="time" value="${existing ? existing.startTime || '' : ''}" />
+        <input id="m-start" type="time" value="${existing ? existing.startTime || '' : ''}" ${isReadOnly ? 'disabled' : ''} />
       </div>
       <div style="width:12px"></div>
       <div style="flex:1">
         <label style="color:var(--secondary)">End time</label>
-        <input id="m-end" type="time" value="${existing ? existing.endTime || '' : ''}" />
+        <input id="m-end" type="time" value="${existing ? existing.endTime || '' : ''}" ${isReadOnly ? 'disabled' : ''} />
       </div>
     </div>
     <label style="color:var(--secondary)">Description</label>
-    <textarea id="m-desc" rows="4">${existing ? existing.description || '' : ''}</textarea>
+    <textarea id="m-desc" rows="4" ${isReadOnly ? 'disabled' : ''}>${existing ? existing.description || '' : ''}</textarea>
     <div class="actions">
-      <button id="m-save" class="primary">Save</button>
+      <button id="m-save" class="${saveButtonClass}">${saveButtonText}</button>
       <button id="m-cancel" class="ghost">Cancel</button>
     </div>
   `;
@@ -101,6 +105,10 @@ export function showEventModal({ date, existing = null, onSave, onDelete } = {})
 
   modal.querySelector('#m-cancel').addEventListener('click', () => overlay.remove());
   modal.querySelector('#m-save').addEventListener('click', () => {
+    if(isReadOnly) {
+      overlay.remove();
+      return;
+    }
     const title = modal.querySelector('#m-title').value.trim();
     const dateVal = modal.querySelector('#m-date').value;
     const startTime = modal.querySelector('#m-start').value || '';
