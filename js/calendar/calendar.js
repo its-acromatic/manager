@@ -27,11 +27,23 @@ export async function refreshCalendarForUser(uid) {
 
   // setup dateClick / eventClick handlers with current uid
   calendar.setOption('dateClick', async (info) => {
-    // fetch events for this date and open a day-list modal first
-    const col = collection(db, 'users', uid, 'events');
-    const q = query(col, where('date', '==', info.dateStr));
+    // fetch events for this date from both collections
+    const manualEventsCol = collection(db, 'users', uid, 'events');
+    const q = query(manualEventsCol, where('date', '==', info.dateStr));
     const snap = await getDocs(q);
     const dayEvents = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    // Also fetch Spotlight events for this date
+    const capturesCol = collection(db, 'users', uid, 'captures');
+    const qCaptures = query(capturesCol, where('dueDate', '==', info.dateStr));
+    const snapCaptures = await getDocs(qCaptures);
+    snapCaptures.forEach(d => {
+      const data = d.data();
+      if(data.type === 'event') {
+        dayEvents.push({ id: d.id, ...data, fromSpotlight: true });
+      }
+    });
+
     showDayModal({ date: info.dateStr, events: dayEvents,
       onAdd: () => {
         showEventModal({ date: info.dateStr, onSave: async (payload) => {
@@ -78,15 +90,36 @@ export async function refreshCalendarForUser(uid) {
 }
 
 async function loadEvents(uid) {
-  const docs = await getDocs(collection(db, 'users', uid, 'events'));
   if(!calendar) return;
   calendar.removeAllEvents();
-  docs.forEach(d => {
+
+  // Load manual calendar events from 'events' collection
+  const eventDocs = await getDocs(collection(db, 'users', uid, 'events'));
+  eventDocs.forEach(d => {
     const data = d.data();
     let start = data.date;
     if(data.startTime) start = `${data.date}T${data.startTime}`;
     const ev = { id: d.id, title: data.title, start };
     if(data.description) ev.extendedProps = { description: data.description };
     calendar.addEvent(ev);
+  });
+
+  // Load Spotlight event captures from 'captures' collection
+  const captureDocs = await getDocs(collection(db, 'users', uid, 'captures'));
+  captureDocs.forEach(d => {
+    const data = d.data();
+    // Only add Spotlight events (type === 'event')
+    if(data.type === 'event' && data.dueDate) {
+      let start = data.dueDate;
+      if(data.time) {
+        const { hour, minute } = data.time;
+        const h = String(hour).padStart(2, '0');
+        const m = String(minute || 0).padStart(2, '0');
+        start = `${data.dueDate}T${h}:${m}`;
+      }
+      const ev = { id: d.id, title: data.title, start };
+      if(data.priority) ev.extendedProps = { ...ev.extendedProps, priority: data.priority };
+      calendar.addEvent(ev);
+    }
   });
 }
