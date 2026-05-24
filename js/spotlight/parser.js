@@ -3,7 +3,7 @@
 
 const WEEKDAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 const KEYWORDS_TASK = ['task', 'todo', 'do', 'homework', 'project', 'work', 'submit', 'finish', 'complete'];
-const KEYWORDS_EVENT = ['meeting', 'call', 'appointment', 'dinner', 'lunch', 'concert', 'show', 'party', 'conference', 'webinar', 'presentation', 'interview', 'workshop', 'class', 'lecture', 'event', 'session', 'gathering'];
+const KEYWORDS_EVENT = ['meeting', 'call', 'appointment', 'dinner', 'lunch', 'concert', 'show', 'party', 'conference', 'webinar', 'presentation', 'interview', 'workshop', 'class', 'tuition', 'lecture', 'event', 'session', 'gathering'];
 const KEYWORDS_EXAM = ['exam', 'test', 'viva', 'quiz', 'practical', 'lab', 'assignment'];
 const KEYWORDS_REMINDER = ['remind', 'remember', 'don\'t forget', 'buy', 'call', 'get', 'pick up', 'return'];
 
