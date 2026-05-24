@@ -56,6 +56,38 @@ textarea {
   font-size: 0.95rem;
 }
 
+.reminders-widget ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 14px;
+}
+
+.reminders-widget li {
+  padding: 16px 18px;
+  border-radius: 20px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  transition: background 220ms ease, transform 220ms ease;
+}
+
+.reminders-widget li:hover {
+  background: rgba(255,255,255,0.06);
+  transform: translateY(-1px);
+}
+
+.reminders-widget li strong {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--text);
+}
+
+.reminders-widget li span {
+  color: var(--secondary);
+  font-size: 0.95rem;
+}
+
 .card {
   transition: transform 200ms ease, box-shadow 200ms ease;
 }

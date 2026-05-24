@@ -71,19 +71,25 @@ async function populateReminders(uid) {
     container.innerHTML = '';
     reminders.forEach((item) => {
       const card = document.createElement('div');
-      card.className = 'reminder-card';
+      card.className = `reminder-card reminder-${item.type}`;
 
       const title = document.createElement('h3');
       title.textContent = item.title;
       card.appendChild(title);
 
       const detail = document.createElement('p');
-      detail.textContent = item.detail || (item.source === 'task' ? 'Task reminder' : 'Calendar item');
+      detail.textContent = item.detail || 'Keep this item in mind today.';
       card.appendChild(detail);
 
       const tag = document.createElement('div');
       tag.className = 'tag';
-      tag.textContent = item.source === 'task' ? 'Task reminder' : item.source === 'event' ? 'Event today' : 'Reminder';
+      tag.textContent = item.type === 'exam'
+        ? 'Exam'
+        : item.type === 'event'
+        ? 'Event today'
+        : item.type === 'reminder'
+        ? 'Reminder'
+        : 'Task reminder';
       card.appendChild(tag);
 
       container.appendChild(card);

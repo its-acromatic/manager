@@ -51,10 +51,10 @@ export function parseSpotlightInput(rawText) {
 
   // Infer type based on keywords
   let type = 'task'; // default
-  if (KEYWORDS_EVENT.some(kw => text.includes(kw))) {
-    type = 'event';
-  } else if (KEYWORDS_EXAM.some(kw => text.includes(kw))) {
+  if (KEYWORDS_EXAM.some(kw => text.includes(kw))) {
     type = 'exam';
+  } else if (KEYWORDS_EVENT.some(kw => text.includes(kw))) {
+    type = 'event';
   } else if (KEYWORDS_REMINDER.some(kw => text.includes(kw))) {
     // Only classify as reminder if NO specific time is set
     // If there's a time, it's a scheduled task, not just a reminder

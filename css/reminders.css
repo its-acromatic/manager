@@ -1,0 +1,128 @@
+.reminders-container {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.tasks-filters {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+  overflow-x: auto;
+  padding: 8px 0;
+}
+
+.filter-btn {
+  padding: 8px 16px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--secondary);
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.filter-btn:hover {
+  border-color: var(--text);
+  color: var(--text);
+}
+
+.filter-btn.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: white;
+}
+
+.reminder-card {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  padding: 18px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: transform 180ms ease, border-color 180ms ease;
+}
+
+.reminder-card:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+.reminder-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.reminder-card h3 {
+  margin: 0 0 8px;
+  font-size: 1rem;
+  color: var(--text);
+  word-break: break-word;
+}
+
+.reminder-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  color: var(--secondary);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.reminder-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.reminder-badge.reminder {
+  background: rgba(255, 153, 51, 0.14);
+  color: #ff9933;
+}
+
+.reminder-badge.exam {
+  background: rgba(155, 93, 229, 0.14);
+  color: #9b5de5;
+}
+
+.reminder-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-end;
+}
+
+.reminder-delete {
+  border: 1px solid rgba(255, 77, 77, 0.24);
+  background: transparent;
+  color: #ff6b6b;
+  padding: 10px 14px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: transform 150ms ease, background 150ms ease;
+}
+
+.reminder-delete:hover {
+  background: rgba(255, 77, 77, 0.08);
+  transform: translateY(-1px);
+}
+
+@media (max-width: 720px) {
+  .reminder-card {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .reminder-actions {
+    align-items: stretch;
+  }
+}

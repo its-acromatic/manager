@@ -17,6 +17,8 @@ export async function loadDashboard(uid) {
   if(!uid) {
     const list = document.getElementById('events-list');
     if(list) list.innerHTML = '<li style="color:var(--secondary)">Please sign in via Settings to view events.</li>';
+    const remindersList = document.getElementById('reminders-list');
+    if(remindersList) remindersList.innerHTML = '<li style="color:var(--secondary)">Please sign in via Settings to view reminders and exams.</li>';
     const percentEl = document.getElementById('attendance-percent');
     const infoEl = document.getElementById('attendance-info');
     if(percentEl) percentEl.textContent = '--%';
@@ -25,6 +27,7 @@ export async function loadDashboard(uid) {
   }
 
   await loadUpcomingEvents(uid);
+  await loadDashboardReminders(uid);
   await loadAttendanceSummary(uid);
   await loadDashboardTasks(uid);
 }
@@ -123,6 +126,69 @@ async function loadUpcomingEvents(uid) {
   }
 }
 
+async function loadDashboardReminders(uid) {
+  const remindersList = document.getElementById('reminders-list');
+  if(!remindersList) return;
+  remindersList.innerHTML = 'Loading...';
+
+  try {
+    const reminders = [];
+    const capturesCol = collection(db, 'users', uid, 'captures');
+    const captureSnapshot = await getDocs(capturesCol);
+
+    captureSnapshot.forEach(doc => {
+      const data = doc.data();
+      if(!data || !data.type) return;
+      if(data.type !== 'exam' && data.type !== 'reminder') return;
+
+      const dueDate = data.dueDate || null;
+      const formattedTime = data.time ? ` · ${String(data.time.hour).padStart(2, '0')}:${String(data.time.minute || 0).padStart(2, '0')}` : '';
+      const detailDate = dueDate ? dueDate : 'No date';
+      const detail = `${detailDate}${formattedTime}`;
+
+      reminders.push({
+        id: doc.id,
+        title: data.title || (data.type === 'exam' ? 'Exam' : 'Reminder'),
+        type: data.type,
+        detail,
+        dueDate
+      });
+    });
+
+    reminders.sort((a, b) => {
+      if(a.dueDate && b.dueDate) return a.dueDate.localeCompare(b.dueDate);
+      if(a.dueDate) return -1;
+      if(b.dueDate) return 1;
+      return a.title.localeCompare(b.title);
+    });
+
+    remindersList.innerHTML = '';
+    if(reminders.length === 0) {
+      remindersList.innerHTML = '<li style="color:var(--secondary)">No saved reminders or exams</li>';
+      return;
+    }
+
+    const displayItems = reminders.slice(0, 3);
+    displayItems.forEach(item => {
+      const li = document.createElement('li');
+      const label = item.type === 'exam' ? 'Exam' : 'Reminder';
+      li.innerHTML = `<strong>${item.title}</strong><br><span>${label} · ${item.detail}</span>`;
+      remindersList.appendChild(li);
+    });
+
+    const remaining = reminders.length - displayItems.length;
+    if (remaining > 0) {
+      const more = document.createElement('li');
+      more.style.color = 'var(--secondary)';
+      more.textContent = `${remaining} more reminder${remaining === 1 ? '' : 's'} available. Open Manage all →`;
+      remindersList.appendChild(more);
+    }
+  } catch (err) {
+    console.error(err);
+    remindersList.innerHTML = '<li style="color:var(--secondary)">Unable to load reminders or exams</li>';
+  }
+}
+
 async function loadAttendanceSummary(uid) {
   const percentEl = document.getElementById('attendance-percent');
   const infoEl = document.getElementById('attendance-info');
@@ -190,7 +256,7 @@ async function loadDashboardTasks(uid) {
       if (b.dueDate) return 1;
       return a.title.localeCompare(b.title);
     });
-    const limited = sorted.slice(0, 5);
+    const limited = sorted.slice(0, 3);
 
     if (limited.length === 0) {
       tasksList.innerHTML = '<li style="color:var(--secondary);text-align:center;padding:20px">No pending tasks</li>';
