@@ -135,6 +135,31 @@
         </p>
       </div>
     </section>
+      <section class="widget spaced-section">
+        <h3>Notifications</h3>
+        <div class="settings-panel">
+          <p class="muted">Notifications help you stay on track. Configure what you want to receive and set quiet hours.</p>
+          <div style="display:flex;flex-direction:column;gap:10px;margin-top:12px">
+            <label><input id="notif-master" type="checkbox" /> Enable notifications (master)</label>
+            <label><input id="notif-tasks" type="checkbox" /> Task reminders</label>
+            <label><input id="notif-events" type="checkbox" /> Event reminders</label>
+            <label><input id="notif-focus" type="checkbox" /> Focus session alerts</label>
+            <label><input id="notif-daily" type="checkbox" /> Daily overview</label>
+            <label><input id="notif-sound" type="checkbox" /> Play sound</label>
+            <div style="display:flex;gap:8px;align-items:center;margin-top:8px">
+              <label style="min-width:90px" class="muted">Quiet hours</label>
+              <input id="notif-quiet-start" type="time" />
+              <span class="muted">to</span>
+              <input id="notif-quiet-end" type="time" />
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;margin-top:12px">
+              <div id="notif-permission" class="muted">Permission: unknown</div>
+              <button id="notif-request" class="primary">Request Permission</button>
+              <button id="notif-test" class="ghost">Test Notification</button>
+            </div>
+          </div>
+        </div>
+      </section>
   </main>
 
   <script type="module" src="js/auth.js"></script>

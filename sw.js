@@ -1,4 +1,4 @@
-const CACHE_NAME = 'manager-cache-v4.8.2';
+const CACHE_NAME = 'manager-cache-v4.9';
 
 const ASSETS = [
   '/manager/',
@@ -35,6 +35,24 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     caches.match(event.request).then((cached) => {
       return cached || fetch(event.request);
+    })
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const targetUrl = (event.notification.data && event.notification.data.url) ? event.notification.data.url : '/manager/';
+
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+      if (windowClients.length > 0) {
+        const client = windowClients[0];
+        if (client.url !== targetUrl) {
+          client.navigate(targetUrl);
+        }
+        return client.focus();
+      }
+      return clients.openWindow(targetUrl);
     })
   );
 });

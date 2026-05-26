@@ -6,6 +6,7 @@ import { initCalendar, refreshCalendarForUser } from './calendar/calendar.js';
 import { initAttendance, refreshAttendanceForUser } from './attendance/attendance.js';
 import { initSpotlight, showSpotlightFAB, hideSpotlightFAB } from './spotlight/spotlight.js';
 import { fetchSessionSettings } from './services/firestoreService.js';
+import { initNotifications } from './notifications/manager.js';
 
 initializeTheme();
 
@@ -69,6 +70,13 @@ subscribeAuth(async (user) => {
 		showSpotlightFAB();
 		loadDashboard(uid);
 
+		// initialize notifications engine (loads scheduled items)
+		try {
+			await initNotifications(uid);
+		} catch (e) {
+			console.warn('Failed to init notifications:', e);
+		}
+
 		if(hasCalendarPage) {
 			refreshCalendarForUser(uid);
 		}
@@ -88,6 +96,12 @@ subscribeAuth(async (user) => {
 	} else {
 		hideSpotlightFAB();
 		loadDashboard(null);
+
+		try {
+			await initNotifications(null);
+		} catch (e) {
+			console.warn('Failed to reset notifications:', e);
+		}
 
 		if(hasCalendarPage) {
 			refreshCalendarForUser(null);

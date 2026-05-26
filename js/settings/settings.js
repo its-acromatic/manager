@@ -3,6 +3,8 @@ import { refreshAttendanceForUser } from '../attendance/attendance.js';
 import { fetchSessionSettings, saveSessionSettings, seedAttendanceRange } from '../services/firestoreService.js';
 import { applyTheme, getStoredTheme } from '../theme.js';
 import { todayISO } from '../utils/date.js';
+import * as notifications from '../notifications/manager.js';
+import { showToast } from '../notifications/ui.js';
 
 const startEl = document.getElementById('session-start');
 const endEl = document.getElementById('session-end');
@@ -113,4 +115,127 @@ if(seedBtn) seedBtn.addEventListener('click', async () => {
   } catch (e) {
     statusEl.textContent = 'Seed failed: ' + e.message;
   }
+});
+
+// --- Notification settings wiring ---
+const notifMaster = document.getElementById('notif-master');
+const notifTasks = document.getElementById('notif-tasks');
+const notifEvents = document.getElementById('notif-events');
+const notifFocus = document.getElementById('notif-focus');
+const notifDaily = document.getElementById('notif-daily');
+const notifSound = document.getElementById('notif-sound');
+const notifQuietStart = document.getElementById('notif-quiet-start');
+const notifQuietEnd = document.getElementById('notif-quiet-end');
+const notifPermission = document.getElementById('notif-permission');
+const notifRequest = document.getElementById('notif-request');
+const notifTest = document.getElementById('notif-test');
+
+async function refreshPermissionLabel() {
+  try {
+    const p = await notifications.checkPermission();
+    if (notifPermission) {
+      notifPermission.textContent = `Permission: ${p}`;
+      if (p === 'insecure') {
+        notifPermission.textContent = 'Permission: insecure (use HTTPS or localhost)';
+      }
+    }
+    return p;
+  } catch (e) {
+    if (notifPermission) notifPermission.textContent = 'Permission: unknown';
+    return 'unknown';
+  }
+}
+
+async function loadNotificationSettings(settings) {
+  const ns = settings?.notifications || {};
+  if (notifMaster) notifMaster.checked = ns.master !== false;
+  if (notifTasks) notifTasks.checked = ns.task !== false;
+  if (notifEvents) notifEvents.checked = ns.event !== false;
+  if (notifFocus) notifFocus.checked = ns.focus !== false;
+  if (notifDaily) notifDaily.checked = ns.daily !== false;
+  if (notifSound) notifSound.checked = ns.sound === true;
+  if (notifQuietStart) notifQuietStart.value = ns.quietHours?.start || '';
+  if (notifQuietEnd) notifQuietEnd.value = ns.quietHours?.end || '';
+  notifications.updateConfig(ns);
+}
+
+function readNotificationSettingsFromUI() {
+  return {
+    master: !!(notifMaster && notifMaster.checked),
+    task: !!(notifTasks && notifTasks.checked),
+    event: !!(notifEvents && notifEvents.checked),
+    focus: !!(notifFocus && notifFocus.checked),
+    daily: !!(notifDaily && notifDaily.checked),
+    sound: !!(notifSound && notifSound.checked),
+    quietHours: {
+      start: notifQuietStart ? notifQuietStart.value : '',
+      end: notifQuietEnd ? notifQuietEnd.value : ''
+    }
+  };
+}
+
+// Hook into auth load flow to populate notification settings when session settings are fetched
+subscribeAuth(async (user) => {
+  if (!user) return;
+  try {
+    const s = await fetchSessionSettings(user.uid);
+    await loadNotificationSettings(s || {});
+    await refreshPermissionLabel();
+  } catch (e) {
+    console.error('Unable to load notification settings', e);
+  }
+});
+
+// Persist changes locally and to Firestore
+[notifMaster, notifTasks, notifEvents, notifFocus, notifDaily, notifSound, notifQuietStart, notifQuietEnd].forEach((el) => {
+  if (!el) return;
+  el.addEventListener('change', async () => {
+    const ns = readNotificationSettingsFromUI();
+    notifications.updateConfig(ns);
+    if (currentUid) {
+      try {
+        await saveSessionSettings(currentUid, { notifications: ns });
+      } catch (e) {
+        console.warn('Failed to persist notification settings', e);
+      }
+    }
+  });
+});
+
+if (notifRequest) notifRequest.addEventListener('click', async () => {
+  const result = await notifications.requestPermission();
+  if (notifPermission) {
+    notifPermission.textContent = result === 'insecure' ? 'Permission: insecure (use HTTPS or localhost)' : `Permission: ${result}`;
+  }
+  showToast({
+    id: 'notif-request-feedback',
+    title: 'Request permission',
+    message: result === 'granted'
+      ? 'Notification permission granted.'
+      : result === 'denied'
+      ? 'Notification permission denied.'
+      : result === 'insecure'
+      ? 'Notifications require HTTPS or localhost.'
+      : 'Notification permission unavailable.',
+    ttl: 5200
+  });
+});
+if (notifTest) notifTest.addEventListener('click', async () => {
+  notifications.testNotification();
+  const p = await notifications.checkPermission();
+  if (notifPermission) {
+    notifPermission.textContent = p === 'insecure' ? 'Permission: insecure (use HTTPS or localhost)' : `Permission: ${p}`;
+  }
+  showToast({
+    id: 'notif-test-feedback',
+    title: 'Test notification',
+    message: p === 'granted'
+      ? 'A test notification has been triggered.'
+      : p === 'denied'
+      ? 'Notifications are denied. Please enable them in browser settings.'
+      : p === 'insecure'
+      ? 'Notifications require HTTPS or localhost.'
+      : 'Test sent. If native permission is not granted, only the toast is visible.',
+    ttl: 5200
+  });
 });

@@ -1,8 +1,31 @@
 import { db } from '../firebase.js';
-import { collection, addDoc, getDocs, doc, deleteDoc, updateDoc, query, where, getDoc } from 'https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js';
+import { collection, getDocs, doc, deleteDoc, updateDoc, query, where, getDoc } from 'https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js';
 import { showLoginModal, showEventModal, showDayModal } from '../modal.js';
+import { createEvent } from '../services/firestoreService.js';
+import { scheduleReminder, cancelReminder } from '../notifications/manager.js';
 
 let calendar;
+
+function buildEventReminderTimestamp(date, startTime) {
+  if (!date) return null;
+  const scheduleTime = startTime ? startTime : '08:00';
+  const iso = `${date}T${scheduleTime}`;
+  const when = new Date(iso);
+  return Number.isNaN(when.getTime()) ? null : when.toISOString();
+}
+
+function buildEventReminderPayload(id, payload) {
+  const ts = buildEventReminderTimestamp(payload.date, payload.startTime);
+  if (!ts) return null;
+  return {
+    id: `event:${id}`,
+    ts,
+    title: 'Event reminder',
+    body: payload.title,
+    type: 'event',
+    priority: 'normal'
+  };
+}
 
 export function initCalendar(containerId = 'calendar') {
   const calendarEl = document.getElementById(containerId);
@@ -48,7 +71,13 @@ export async function refreshCalendarForUser(uid) {
     showDayModal({ date: info.dateStr, events: dayEvents,
       onAdd: () => {
         showEventModal({ date: info.dateStr, onSave: async (payload) => {
-          await addDoc(collection(db, 'users', uid, 'events'), payload);
+          const saved = await createEvent(uid, payload);
+          if (saved) {
+            const reminderPayload = buildEventReminderPayload(saved.id, saved);
+            if (reminderPayload) {
+              scheduleReminder(reminderPayload);
+            }
+          }
           await loadEvents(uid);
         }});
       },
@@ -76,10 +105,17 @@ export async function refreshCalendarForUser(uid) {
           showEventModal({ date: ev.date, existing: ev, onSave: async (payload) => {
             if(ev.id) {
               await updateDoc(doc(db, 'users', uid, 'events', ev.id), { title: payload.title, date: payload.date, description: payload.description || '', startTime: payload.startTime || '', endTime: payload.endTime || '' });
+              const reminderPayload = buildEventReminderPayload(ev.id, { title: payload.title, date: payload.date, startTime: payload.startTime });
+              if (reminderPayload) {
+                scheduleReminder(reminderPayload);
+              }
             }
             await loadEvents(uid);
           }, onDelete: async (id) => {
-            if(id) await deleteDoc(doc(db, 'users', uid, 'events', id));
+            if(id) {
+              cancelReminder(`event:${id}`);
+              await deleteDoc(doc(db, 'users', uid, 'events', id));
+            }
             await loadEvents(uid);
           }});
         }
@@ -133,10 +169,17 @@ export async function refreshCalendarForUser(uid) {
         showEventModal({ date: existing.date, existing: existing, onSave: async (payload) => {
           if(existing.id) {
             await updateDoc(doc(db, 'users', uid, 'events', existing.id), { title: payload.title, date: payload.date, description: payload.description || '', startTime: payload.startTime || '', endTime: payload.endTime || '' });
+            const reminderPayload = buildEventReminderPayload(existing.id, { title: payload.title, date: payload.date, startTime: payload.startTime });
+            if (reminderPayload) {
+              scheduleReminder(reminderPayload);
+            }
           }
           await loadEvents(uid);
         }, onDelete: async (id) => {
-          if(id) await deleteDoc(doc(db, 'users', uid, 'events', id));
+          if(id) {
+            cancelReminder(`event:${id}`);
+            await deleteDoc(doc(db, 'users', uid, 'events', id));
+          }
           await loadEvents(uid);
         }});
       }

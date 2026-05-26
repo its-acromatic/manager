@@ -77,6 +77,7 @@ export async function saveSessionSettings(uid, settings) {
     ...(settings.end !== undefined ? { end: settings.end } : {}),
     ...(settings.requiredPercent !== undefined ? { requiredPercent: settings.requiredPercent } : {}),
     ...(settings.theme !== undefined ? { theme: settings.theme } : {})
+    ,...(settings.notifications !== undefined ? { notifications: settings.notifications } : {})
   }, { merge: true });
 }
 
