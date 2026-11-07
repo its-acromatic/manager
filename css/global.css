@@ -33,9 +33,11 @@ html {
 }
 
 body {
+  height: 100vh;
   min-height: 100vh;
   margin: 0;
   display: flex;
+  overflow: hidden;
   background: radial-gradient(circle at 10% 15%, var(--accent-soft), transparent 22%),
               radial-gradient(circle at 95% 15%, var(--accent-soft), transparent 25%),
               linear-gradient(180deg, var(--bg) 0%, var(--bg-soft) 48%, var(--bg) 100%);
@@ -58,8 +60,13 @@ button, input, textarea, select {
 a { color: inherit; }
 
 .sidebar {
+  position: fixed;
+  inset: 0 auto 0 0;
   width: 280px;
   min-width: 280px;
+  height: 100vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   background: var(--surface-strong);
   border-right: 1px solid var(--border);
   padding: 32px 26px;
@@ -131,6 +138,10 @@ a { color: inherit; }
 
 .main-content {
   flex: 1;
+  height: 100vh;
+  margin-left: 280px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 36px 40px;
   min-width: 0;
 }
@@ -161,6 +172,7 @@ a { color: inherit; }
   }
 
   .main-content {
+    margin-left: 0;
     padding: 24px 20px 32px;
   }
 }
@@ -512,9 +524,9 @@ button:hover {
 
 .modal button { min-height: 44px; }
 
-@media (max-width: 1100px) {
+@media (min-width: 961px) and (max-width: 1100px) {
   .sidebar { width: 240px; min-width: 240px; padding: 28px 24px; }
-  .main-content { padding: 28px 28px; }
+  .main-content { margin-left: 240px; padding: 28px 28px; }
 }
 
 @media (max-width: 860px) {
@@ -522,7 +534,7 @@ button:hover {
   .sidebar { width: 100%; min-width: auto; border-radius: 0 0 24px 24px; padding: 20px 18px; }
   .sidebar nav { flex-direction: row; flex-wrap: wrap; gap: 10px; }
   .sidebar a { flex: 1 1 calc(50% - 10px); }
-  .main-content { padding: 22px 20px; }
+  .main-content { margin-left: 0; padding: 22px 20px; }
   .topbar { flex-direction: column; align-items: flex-start; }
 }
 

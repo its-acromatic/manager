@@ -5,6 +5,10 @@ body.focus-mode-page {
   position: relative;
 }
 
+.focus-mode-page .main-content {
+  margin-left: 0;
+}
+
 body.focus-mode-page::before {
   content: '';
   position: fixed;
