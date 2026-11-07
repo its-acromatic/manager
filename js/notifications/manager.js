@@ -1,5 +1,4 @@
 import * as storage from './storage.js';
-import * as perms from './permissions.js';
 import * as ui from './ui.js';
 import * as scheduler from './scheduler.js';
 import { db } from '../firebase.js';
@@ -49,32 +48,52 @@ function inQuietHours() {
   }
 }
 
-function buildTimestamp(date, time, fallback = null) {
-  if (!date) return null;
-  const timeValue = time ? (typeof time === 'string' ? time : `${String(time.hour).padStart(2, '0')}:${String(time.minute || 0).padStart(2, '0')}`) : fallback;
-  if (!timeValue) return null;
-  const iso = `${date}T${timeValue}`;
-  const ts = new Date(iso);
-  return Number.isNaN(ts.getTime()) ? null : ts.toISOString();
+function normalizeTime(time) {
+  if (!time) return null;
+  let hour;
+  let minute;
+  let period = null;
+
+  if (typeof time === 'string') {
+    const match = time.trim().match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$/i);
+    if (!match) return null;
+    hour = Number(match[1]);
+    minute = Number(match[2] || 0);
+    period = match[3]?.toLowerCase() || null;
+  } else if (typeof time === 'object' && Number.isFinite(Number(time.hour))) {
+    hour = Number(time.hour);
+    minute = Number(time.minute || 0);
+    period = typeof time.period === 'string' ? time.period.toLowerCase() : null;
+  } else {
+    return null;
+  }
+
+  if (!Number.isInteger(hour) || !Number.isInteger(minute) || minute < 0 || minute > 59) return null;
+  if (period === 'pm' && hour >= 1 && hour <= 11) hour += 12;
+  if (period === 'am' && hour === 12) hour = 0;
+  if (hour < 0 || hour > 23) return null;
+  return { hour, minute };
+}
+
+function buildTimestamp(date, time) {
+  const parsedTime = normalizeTime(time);
+  if (!date || !parsedTime) return null;
+  const dateParts = date.split('-').map(Number);
+  if (dateParts.length !== 3 || dateParts.some((part) => !Number.isInteger(part))) return null;
+  const [year, month, day] = dateParts;
+  const timestamp = new Date(year, month - 1, day, parsedTime.hour, parsedTime.minute, 0, 0);
+  if (timestamp.getFullYear() !== year || timestamp.getMonth() !== month - 1 || timestamp.getDate() !== day) return null;
+  return timestamp.toISOString();
 }
 
 function hasTimeValue(time) {
-  if (!time) return false;
-  if (typeof time === 'string') {
-    return time.trim().length > 0;
-  }
-  return typeof time.hour === 'number';
-}
-
-function getTimeString(time) {
-  if (!time) return '';
-  if (typeof time === 'string') return time;
-  return `${String(time.hour).padStart(2, '0')}:${String(time.minute || 0).padStart(2, '0')}`;
+  return normalizeTime(time) !== null;
 }
 
 function isTodayDate(dateStr) {
   if (!dateStr) return false;
-  const today = new Date().toISOString().slice(0, 10);
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   return dateStr === today;
 }
 
@@ -104,12 +123,17 @@ async function loadFirestoreSchedules(uid) {
     const type = data.type || 'reminder';
 
     if (hasTimeValue(data.time)) {
-      const ts = buildTimestamp(data.dueDate, getTimeString(data.time));
+      const ts = buildTimestamp(data.dueDate, data.time);
       if (ts) {
-        timedItems.push({ id: itemId, ts, title, body, type, priority: 'normal' });
+        const timestamp = Date.parse(ts);
+        if (timestamp >= Date.now()) {
+          timedItems.push({ id: itemId, ts, title, body, type, priority: 'normal' });
+        } else if (isTodayDate(data.dueDate) && Date.now() - timestamp < 60000) {
+          pageLoadItems.push({ id: itemId, title, body, type, priority: 'normal' });
+        }
       }
     } else if (isTodayDate(data.dueDate)) {
-      pageLoadItems.push({ id: itemId, title, body, type, noNative: true, priority: 'normal' });
+      pageLoadItems.push({ id: itemId, title, body, type, priority: 'normal' });
     }
   });
 
@@ -122,12 +146,17 @@ async function loadFirestoreSchedules(uid) {
     const itemId = `event:${doc.id}`;
 
     if (hasTimeValue(data.startTime)) {
-      const ts = buildTimestamp(data.date, getTimeString(data.startTime));
+      const ts = buildTimestamp(data.date, data.startTime);
       if (ts) {
-        timedItems.push({ id: itemId, ts, title, body, type: 'event', priority: 'normal' });
+        const timestamp = Date.parse(ts);
+        if (timestamp >= Date.now()) {
+          timedItems.push({ id: itemId, ts, title, body, type: 'event', priority: 'normal' });
+        } else if (isTodayDate(data.date) && Date.now() - timestamp < 60000) {
+          pageLoadItems.push({ id: itemId, title, body, type: 'event', priority: 'normal' });
+        }
       }
     } else if (isTodayDate(data.date)) {
-      pageLoadItems.push({ id: itemId, title, body, type: 'event', noNative: true, priority: 'normal' });
+      pageLoadItems.push({ id: itemId, title, body, type: 'event', priority: 'normal' });
     }
   });
 
@@ -138,31 +167,15 @@ async function loadFirestoreSchedules(uid) {
 export async function triggerNotification(payload) {
   try {
     if (!config.master) return;
+    if (payload.type === 'event' && config.event === false) return;
+    if (['task', 'reminder', 'exam'].includes(payload.type) && config.task === false) return;
+    if (payload.type === 'focus' && config.focus === false) return;
+    if (payload.type === 'daily' && config.daily === false) return;
     if (inQuietHours() && payload.priority !== 'critical') return;
 
     const key = payload.id || payload.tag || (payload.type + '::' + payload.title);
     if (firedKeys.has(key)) return;
     firedKeys.add(key);
-
-    if (!payload.noNative && await perms.checkPermission() === 'granted') {
-      try {
-        if (navigator.serviceWorker && navigator.serviceWorker.ready) {
-          const reg = await navigator.serviceWorker.ready;
-          if (reg && reg.showNotification) {
-            reg.showNotification(payload.title || 'Manager', {
-              body: payload.body || '',
-              tag: payload.tag || key,
-              icon: payload.icon || '/favicon.png',
-              data: payload.data || {},
-              badge: payload.badge || '/favicon.png'
-            });
-          }
-        } else if (typeof Notification !== 'undefined') {
-          new Notification(payload.title || 'Manager', { body: payload.body || '', tag: payload.tag || key, icon: payload.icon || '/favicon.png' });
-        }
-      } catch (e) {
-      }
-    }
 
     ui.showToast({
       id: key,
@@ -187,15 +200,6 @@ export function cancelReminder(id) {
   scheduler.cancel(id);
 }
 
-export async function checkPermission() {
-  return perms.checkPermission();
-}
-
-export async function requestPermission() {
-  const result = await perms.requestPermission();
-  return result;
-}
-
 export function getConfig() {
   return config;
 }
@@ -209,7 +213,7 @@ export function testNotification() {
       id: payload.id,
       icon: '',
       title: payload.title,
-      message: 'Notifications are currently disabled in settings. This is a test preview.',
+      message: 'In-app notifications are currently disabled in settings.',
       ttl: 6000
     });
   }
