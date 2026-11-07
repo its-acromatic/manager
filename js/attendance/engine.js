@@ -155,7 +155,7 @@ export function generateSessionDayObjects(sessionStartISO, sessionEndISO, existi
     if(existingOverrides && existingOverrides[date]) {
       return { date, status: existingOverrides[date].status, meta: existingOverrides[date].meta || {} };
     }
-    return { date, status: defaultStatusForDateISO(date), meta: {} };
+    return { date, status: DayStatus.UNMARKED, meta: {} };
   });
 }
 

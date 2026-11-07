@@ -1,4 +1,4 @@
-const CACHE_NAME = 'manager-cache-v4.10';
+const CACHE_NAME = 'manager-cache-v4.11';
 
 const ASSETS = [
   '/manager/',
@@ -6,7 +6,9 @@ const ASSETS = [
   '/manager/manifest.json',
   '/manager/css/global.css',
   '/manager/css/dashboard.css',
-  '/manager/js/app.js'
+  '/manager/js/app.js',
+  '/manager/js/attendance/engine.js',
+  '/manager/js/attendance/attendance.js'
 ];
 
 self.addEventListener('install', (event) => {
