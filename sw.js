@@ -1,4 +1,4 @@
-const CACHE_NAME = 'manager-cache-v4.14';
+const CACHE_NAME = 'manager-cache-v4.15';
 
 const ASSETS = [
   '/manager/',
@@ -43,9 +43,35 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+  const request = event.request;
+  const shouldRefresh = request.mode === 'navigate' || ['script', 'style'].includes(request.destination);
+
+  if (shouldRefresh) {
+    event.respondWith((async () => {
+      const cache = await caches.open(CACHE_NAME);
+      let response;
+      try {
+        response = await fetch(request);
+      } catch (error) {
+        const cached = await cache.match(request);
+        if (cached) return cached;
+        throw error;
+      }
+      if (response.ok) {
+        try {
+          await cache.put(request, response.clone());
+        } catch (error) {
+          console.warn('Unable to update cached app asset:', error);
+        }
+      }
+      return response;
+    })());
+    return;
+  }
+
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      return cached || fetch(event.request);
+    caches.match(request).then((cached) => {
+      return cached || fetch(request);
     })
   );
 });
