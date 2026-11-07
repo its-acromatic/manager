@@ -136,6 +136,54 @@ a { color: inherit; }
   transform: translateX(3px);
 }
 
+.page-reload {
+  position: fixed;
+  right: 30px;
+  bottom: 16px;
+  z-index: 9999;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  background: rgba(255,255,255,0.04);
+  color: var(--secondary);
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 180ms ease, color 180ms ease, border-color 180ms ease, transform 180ms ease;
+}
+
+.page-reload:hover,
+.page-reload:focus-visible {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--text);
+  transform: rotate(30deg);
+}
+
+.page-reload:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+@media (max-width: 600px) {
+  .page-reload {
+    right: 20px;
+    bottom: 12px;
+  }
+}
+
+@media (max-width: 400px) {
+  .page-reload {
+    right: 14px;
+    bottom: 8px;
+  }
+}
+
 .main-content {
   flex: 1;
   height: 100vh;

@@ -119,6 +119,17 @@ function initMobileNav() {
 	const sidebarClose = document.querySelector('.sidebar-close');
 	const navLinks = document.querySelectorAll('.sidebar nav a');
 
+	if(!document.querySelector('.page-reload')) {
+		const reloadButton = document.createElement('button');
+		reloadButton.className = 'page-reload';
+		reloadButton.type = 'button';
+		reloadButton.textContent = '\u21bb';
+		reloadButton.setAttribute('aria-label', 'Reload page');
+		reloadButton.title = 'Reload page';
+		reloadButton.addEventListener('click', () => window.location.reload());
+		document.body.appendChild(reloadButton);
+	}
+
 	const closeSidebar = () => {
 		if(sidebar) sidebar.classList.remove('open');
 	};

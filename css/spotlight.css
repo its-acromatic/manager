@@ -313,8 +313,8 @@
 /* Floating Action Button */
 .spotlight-fab {
   position: fixed;
-  bottom: 24px;
-  right: 24px;
+  bottom: 68px;
+  right: 30px;
   width: 56px;
   height: 56px;
   border: none;
@@ -362,8 +362,8 @@
   }
 
   .spotlight-fab {
-    bottom: 20px;
-    right: 16px;
+    bottom: 64px;
+    right: 20px;
     width: 52px;
     height: 52px;
     font-size: 1.2rem;
@@ -372,8 +372,8 @@
 
 @media (max-width: 400px) {
   .spotlight-fab {
-    bottom: 16px;
-    right: 12px;
+    bottom: 60px;
+    right: 14px;
     width: 48px;
     height: 48px;
     font-size: 1.1rem;
