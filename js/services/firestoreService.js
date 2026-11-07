@@ -19,6 +19,19 @@ const attendanceCollection = (uid) => collection(db, 'users', uid, 'attendance')
 const eventsCollection = (uid) => collection(db, 'users', uid, 'events');
 const settingsDoc = (uid) => doc(db, 'users', uid, 'settings', 'session');
 
+function getEventScheduleMetadata(payload) {
+  const [year, month, day] = payload.date.split('-').map(Number);
+  let hour = 0;
+  let minute = 0;
+  const hasTime = Boolean(payload.startTime);
+  if (hasTime) {
+    [hour, minute] = payload.startTime.split(':').map(Number);
+  }
+  const scheduled = new Date(year, month - 1, day, hour, minute, 0, 0);
+  if (Number.isNaN(scheduled.getTime())) return { scheduledDateTime: null, scheduledHasTime: hasTime };
+  return { scheduledDateTime: scheduled.toISOString(), scheduledHasTime: hasTime };
+}
+
 export async function fetchAttendanceEntries(uid) {
   if (!uid) return [];
   const snap = await getDocs(query(attendanceCollection(uid), orderBy('date')));
@@ -96,14 +109,25 @@ export async function fetchEventsByDate(uid, date) {
 
 export async function createEvent(uid, payload) {
   if (!uid || !payload || !payload.date || !payload.title) return null;
-  const ref = await addDoc(eventsCollection(uid), payload);
-  return { id: ref.id, ...payload };
+  const now = new Date().toISOString();
+  const event = {
+    ...payload,
+    ...getEventScheduleMetadata(payload),
+    createdAt: now,
+    updatedAt: now
+  };
+  const ref = await addDoc(eventsCollection(uid), event);
+  return { id: ref.id, ...event };
 }
 
 export async function updateEvent(uid, id, payload) {
   if (!uid || !id || !payload) return;
   const ref = doc(eventsCollection(uid), id);
-  await updateDoc(ref, payload);
+  await updateDoc(ref, {
+    ...payload,
+    ...getEventScheduleMetadata(payload),
+    updatedAt: new Date().toISOString()
+  });
 }
 
 export async function deleteEvent(uid, id) {

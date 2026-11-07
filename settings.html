@@ -107,31 +107,33 @@
           <strong>Quick Capture:</strong> Press <code style="background:rgba(255,255,255,0.06);padding:2px 6px;border-radius:4px;font-size:0.9em">Cmd+K</code> or <code style="background:rgba(255,255,255,0.06);padding:2px 6px;border-radius:4px;font-size:0.9em">Ctrl+K</code> to open Spotlight from anywhere.
         </p>
         
-        <h4 style="font-size:0.95rem;font-weight:600;margin:16px 0 8px;color:var(--text)">Supported Phrases</h4>
+        <h4 style="font-size:0.95rem;font-weight:600;margin:16px 0 8px;color:var(--text)">Set the Type</h4>
+        <p class="muted" style="margin:0;font-size:0.9rem">Start with <code>task</code>, <code>event</code>, <code>exam</code>, <code>reminder</code>, <code>focus</code>, or <code>note</code> to choose the type directly. The first word is removed from the saved title. Without a type word, Spotlight infers one and defaults to a task.</p>
+
+        <h4 style="font-size:0.95rem;font-weight:600;margin:16px 0 8px;color:var(--text)">Dates and Times</h4>
         <ul style="margin:0;padding-left:20px;color:var(--secondary);font-size:0.9rem;line-height:1.8">
-          <li><strong>Dates:</strong> today, tomorrow, monday, tuesday, etc.</li>
-          <li><strong>Times:</strong> 5pm, 8:30am, 3:15 pm (optional with dates)</li>
-          <li><strong>Types:</strong> Automatically inferred from keywords</li>
+          <li><strong>Dates:</strong> today, tomorrow, tonight, monday, next monday, this saturday, 25 dec, 25 december, june 12, 12/06/2026, after 3 days, next week.</li>
+          <li><strong>Clock times:</strong> 5pm, 5:30pm, 8:30 am, 17:30, noon, midnight.</li>
+          <li><strong>Time of day:</strong> morning (9 AM), afternoon (2 PM), evening (6 PM), night/tonight (9 PM).</li>
+          <li>A weekday without a modifier means its nearest occurrence. Numeric dates use DD/MM/YYYY or DD-MM-YYYY.</li>
+          <li>A bare hour such as <code>5</code> is ambiguous, so it is left unscheduled; add <code>am</code>, <code>pm</code>, or <code>at 17:00</code>.</li>
         </ul>
+
+        <h4 style="font-size:0.95rem;font-weight:600;margin:16px 0 8px;color:var(--text)">Priority and Tags</h4>
+        <p class="muted" style="margin:0;font-size:0.9rem">Add <code>urgent</code>, <code>high</code>, <code>medium</code>, or <code>low</code> to set priority. Add tags with <code>#tag</code>.</p>
 
         <h4 style="font-size:0.95rem;font-weight:600;margin:16px 0 8px;color:var(--text)">Examples</h4>
         <ul style="margin:0;padding-left:20px;color:var(--secondary);font-size:0.9rem;line-height:1.8">
-          <li>"physics assignment tomorrow 5pm" → Task on tomorrow @ 5pm</li>
-          <li>"buy stylus nibs" → Reminder (no date needed)</li>
-          <li>"chemistry viva monday" → Exam on Monday</li>
-          <li>"meeting with prof thursday 2pm" → Event on Thursday @ 2pm</li>
-        </ul>
-
-        <h4 style="font-size:0.95rem;font-weight:600;margin:16px 0 8px;color:var(--text)">Best Practices</h4>
-        <ul style="margin:0;padding-left:20px;color:var(--secondary);font-size:0.9rem;line-height:1.8">
-          <li>Write naturally — parsing is forgiving</li>
-          <li>Include keywords: exam, task, meeting, remind, buy, etc.</li>
-          <li>Review parsed data before saving (edit if needed)</li>
-          <li>Dates auto-complete: "tomorrow", weekdays supported</li>
+          <li><code>task finish physics homework tomorrow 5pm urgent</code> → Task, Physics Homework, tomorrow at 5 PM, urgent.</li>
+          <li><code>event annual function 25 december</code> → Event on December 25.</li>
+          <li><code>exam chemistry monday 8am</code> → Chemistry exam on the nearest Monday at 8 AM.</li>
+          <li><code>reminder call sir tonight</code> → Reminder for tonight at 9 PM.</li>
+          <li><code>focus deep work 9pm</code> → Focus capture scheduled for 9 PM.</li>
+          <li><code>meeting with sir friday 2:30pm #college</code> → Event with a college tag, Friday at 2:30 PM.</li>
         </ul>
 
         <p style="margin-top:16px;padding:12px;background:rgba(77,163,255,0.1);border-radius:8px;color:var(--secondary);font-size:0.85rem">
-          <strong>💡 Tip:</strong> Spotlight integrates with your tasks, reminders, and events. Quick captures sync instantly to your dashboard.
+          Check the live preview before saving. Spotlight shows a subtle note when a time is unclear; correct it in the input if needed.
         </p>
       </div>
     </section>

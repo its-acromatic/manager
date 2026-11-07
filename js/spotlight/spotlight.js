@@ -1,7 +1,7 @@
 // Spotlight: Global quick capture system
 // Keyboard-accessible command palette for tasks, reminders, events, and notes
 
-import { parseSpotlightInput, formatParsedForDisplay } from './parser.js';
+import { parseSpotlightInput, formatParsedForDisplay, getParsedMetadata } from './parser.js';
 import { saveSpotlightCapture } from '../services/spotlightService.js';
 
 let spotlightOpen = false;
@@ -108,9 +108,37 @@ export function openSpotlight() {
       return;
     }
 
-    const display = formatParsedForDisplay(currentParsed);
-    const typeTag = `<span class="spotlight-type-tag spotlight-type-${currentParsed.type}">${currentParsed.type}</span>`;
-    parsedDiv.innerHTML = `<div class="spotlight-preview">${typeTag} ${display}</div>`;
+    const preview = document.createElement('div');
+    preview.className = 'spotlight-preview';
+
+    const title = document.createElement('strong');
+    title.className = 'spotlight-preview-title';
+    title.textContent = formatParsedForDisplay(currentParsed);
+    preview.appendChild(title);
+
+    const metadata = document.createElement('div');
+    metadata.className = 'spotlight-metadata';
+    getParsedMetadata(currentParsed).forEach((value) => {
+      const chip = document.createElement('span');
+      chip.className = `spotlight-meta-chip${value === currentParsed.type ? ` spotlight-type-tag spotlight-type-${currentParsed.type}` : ''}${value === currentParsed.priority ? ' spotlight-priority-chip' : ''}`;
+      chip.textContent = value;
+      metadata.appendChild(chip);
+    });
+    preview.appendChild(metadata);
+
+    const confidence = document.createElement('span');
+    confidence.className = `spotlight-confidence${currentParsed.confidence < 0.6 ? ' is-low' : ''}`;
+    confidence.textContent = currentParsed.confidence < 0.6 ? 'Check details' : `${Math.round(currentParsed.confidence * 100)}%`;
+    confidence.title = currentParsed.clarification || 'Parser confidence';
+    preview.appendChild(confidence);
+    parsedDiv.replaceChildren(preview);
+
+    if (currentParsed.clarification) {
+      const hint = document.createElement('p');
+      hint.className = 'spotlight-clarification';
+      hint.textContent = currentParsed.clarification;
+      parsedDiv.appendChild(hint);
+    }
 
     actionsDiv.innerHTML = `
       <button id="spotlight-save" class="spotlight-btn-save">Save</button>

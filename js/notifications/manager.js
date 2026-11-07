@@ -90,6 +90,21 @@ function hasTimeValue(time) {
   return normalizeTime(time) !== null;
 }
 
+function getStoredScheduleTimestamp(data, dateKey, timeKey) {
+  if (data.scheduledHasTime !== true && !hasTimeValue(data[timeKey])) return null;
+  const stored = data.reminderAtDateTime || data.scheduledDateTime;
+  if (stored) {
+    const timestamp = Date.parse(stored);
+    if (!Number.isNaN(timestamp)) return new Date(timestamp).toISOString();
+  }
+  if (!hasTimeValue(data[timeKey])) return null;
+  return buildTimestamp(data[dateKey], data[timeKey]);
+}
+
+function hasScheduledClockTime(data, timeKey) {
+  return data.scheduledHasTime === true || hasTimeValue(data[timeKey]);
+}
+
 function isTodayDate(dateStr) {
   if (!dateStr) return false;
   const now = new Date();
@@ -97,11 +112,20 @@ function isTodayDate(dateStr) {
   return dateStr === today;
 }
 
+function isTodayTimestamp(timestamp) {
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) return false;
+  const localDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  return isTodayDate(localDate);
+}
+
 function getScheduleTitle(type) {
   switch (type) {
     case 'task': return 'Task reminder';
     case 'event': return 'Event reminder';
     case 'exam': return 'Exam reminder';
+    case 'focus': return 'Focus session';
+    case 'note': return 'Note';
     default: return 'Reminder';
   }
 }
@@ -115,24 +139,22 @@ async function loadFirestoreSchedules(uid) {
 
   captureSnapshot.forEach((doc) => {
     const data = doc.data();
-    if (!data || !data.dueDate) return;
+    if (!data || !data.dueDate || data.completed) return;
 
     const title = getScheduleTitle(data.type);
     const body = data.title || title;
     const itemId = `capture:${data.type || 'reminder'}:${doc.id}`;
     const type = data.type || 'reminder';
 
-    if (hasTimeValue(data.time)) {
-      const ts = buildTimestamp(data.dueDate, data.time);
-      if (ts) {
-        const timestamp = Date.parse(ts);
-        if (timestamp >= Date.now()) {
-          timedItems.push({ id: itemId, ts, title, body, type, priority: 'normal' });
-        } else if (isTodayDate(data.dueDate) && Date.now() - timestamp < 60000) {
-          pageLoadItems.push({ id: itemId, title, body, type, priority: 'normal' });
-        }
+    const ts = getStoredScheduleTimestamp(data, 'dueDate', 'time');
+    if (ts) {
+      const timestamp = Date.parse(ts);
+      if (timestamp >= Date.now()) {
+        timedItems.push({ id: itemId, ts, title, body, type, priority: 'normal' });
+      } else if (isTodayTimestamp(timestamp) && Date.now() - timestamp < 60000) {
+        pageLoadItems.push({ id: itemId, title, body, type, priority: 'normal' });
       }
-    } else if (isTodayDate(data.dueDate)) {
+    } else if (!hasScheduledClockTime(data, 'time') && isTodayDate(data.dueDate)) {
       pageLoadItems.push({ id: itemId, title, body, type, priority: 'normal' });
     }
   });
@@ -145,17 +167,15 @@ async function loadFirestoreSchedules(uid) {
     const body = data.title || title;
     const itemId = `event:${doc.id}`;
 
-    if (hasTimeValue(data.startTime)) {
-      const ts = buildTimestamp(data.date, data.startTime);
-      if (ts) {
-        const timestamp = Date.parse(ts);
-        if (timestamp >= Date.now()) {
-          timedItems.push({ id: itemId, ts, title, body, type: 'event', priority: 'normal' });
-        } else if (isTodayDate(data.date) && Date.now() - timestamp < 60000) {
-          pageLoadItems.push({ id: itemId, title, body, type: 'event', priority: 'normal' });
-        }
+    const ts = getStoredScheduleTimestamp(data, 'date', 'startTime');
+    if (ts) {
+      const timestamp = Date.parse(ts);
+      if (timestamp >= Date.now()) {
+        timedItems.push({ id: itemId, ts, title, body, type: 'event', priority: 'normal' });
+      } else if (isTodayTimestamp(timestamp) && Date.now() - timestamp < 60000) {
+        pageLoadItems.push({ id: itemId, title, body, type: 'event', priority: 'normal' });
       }
-    } else if (isTodayDate(data.date)) {
+    } else if (!hasScheduledClockTime(data, 'startTime') && isTodayDate(data.date)) {
       pageLoadItems.push({ id: itemId, title, body, type: 'event', priority: 'normal' });
     }
   });

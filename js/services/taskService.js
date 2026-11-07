@@ -6,20 +6,41 @@ import { scheduleReminder, cancelReminder } from '../notifications/manager.js';
 const tasksCollection = (uid) => collection(db, 'users', uid, 'captures');
 
 function buildTaskReminderTimestamp(dueDate, time) {
-  if (!dueDate) return null;
-  const scheduleTime = time && typeof time.hour === 'number'
-    ? `${String(time.hour).padStart(2, '0')}:${String(time.minute || 0).padStart(2, '0')}`
-    : '08:00';
-  const iso = `${dueDate}T${scheduleTime}`;
-  const when = new Date(iso);
+  if (!dueDate || !time || typeof time.hour !== 'number') return null;
+  let hour = Number(time.hour);
+  const minute = Number(time.minute || 0);
+  if (time.period === 'pm' && hour < 12) hour += 12;
+  if (time.period === 'am' && hour === 12) hour = 0;
+  if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
+  const [year, month, day] = dueDate.split('-').map(Number);
+  const when = new Date(year, month - 1, day, hour, minute, 0, 0);
   return Number.isNaN(when.getTime()) ? null : when.toISOString();
 }
 
+function buildTaskScheduleFields(payload, useParsedSchedule = false) {
+  const scheduledHasTime = useParsedSchedule ? payload.scheduledHasTime === true : !!payload.time;
+  const scheduledDateTime = payload.scheduledDateTime || buildTaskReminderTimestamp(payload.dueDate, payload.time) || (() => {
+    if (!payload.dueDate) return null;
+    const [year, month, day] = payload.dueDate.split('-').map(Number);
+    return new Date(year, month - 1, day, 0, 0, 0, 0).toISOString();
+  })();
+  let reminderAtDateTime = payload.reminderAtDateTime || null;
+  if (scheduledHasTime && scheduledDateTime && !reminderAtDateTime) {
+    reminderAtDateTime = new Date(Date.parse(scheduledDateTime) - Number(payload.reminderOffsetMinutes || 0) * 60000).toISOString();
+  }
+  return { scheduledDateTime, scheduledHasTime, reminderAtDateTime };
+}
+
+function cancelTaskReminder(taskId) {
+  cancelReminder(`task:${taskId}`);
+  cancelReminder(`capture:task:${taskId}`);
+}
+
 function buildTaskReminderPayload(id, payload) {
-  const ts = buildTaskReminderTimestamp(payload.dueDate, payload.time);
+  const ts = payload.reminderAtDateTime || (payload.scheduledHasTime ? payload.scheduledDateTime : null) || buildTaskReminderTimestamp(payload.dueDate, payload.time);
   if (!ts) return null;
   return {
-    id: `task:${id}`,
+    id: `capture:task:${id}`,
     ts,
     title: 'Task reminder',
     body: payload.title,
@@ -31,16 +52,19 @@ function buildTaskReminderPayload(id, payload) {
 export async function saveTask(uid, parsed) {
   if (!uid || !parsed || !parsed.title) return null;
 
-  const payload = {
+  const taskData = {
     title: parsed.title,
     type: 'task',
     dueDate: parsed.dueDate || null,
     time: parsed.time || null,
+    reminderOffsetMinutes: parsed.reminderOffsetMinutes ?? null,
+    tags: parsed.tags || [],
     completed: false,
-    priority: 'normal',
+    priority: parsed.priority || 'normal',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
+  const payload = { ...taskData, ...buildTaskScheduleFields({ ...taskData, ...parsed }, true) };
 
   const ref = await addDoc(tasksCollection(uid), payload);
   const task = { id: ref.id, ...payload };
@@ -62,22 +86,23 @@ export async function fetchTasks(uid) {
 export async function updateTask(uid, taskId, updates) {
   if (!uid || !taskId) return;
   const ref = doc(tasksCollection(uid), taskId);
-  await updateDoc(ref, { ...updates, updatedAt: new Date().toISOString() });
-  if (updates.dueDate || updates.time || updates.title) {
-    const snapshot = await getDoc(ref);
-    if (snapshot.exists()) {
-      const data = snapshot.data();
-      const reminderPayload = buildTaskReminderPayload(taskId, data);
-      if (reminderPayload) {
-        scheduleReminder(reminderPayload);
-      }
-    }
+  const snapshot = await getDoc(ref);
+  if (!snapshot.exists()) return;
+  const current = snapshot.data();
+  const data = { ...current, ...updates };
+  const scheduleChanged = ['dueDate', 'time'].some((key) => Object.hasOwn(updates, key));
+  const scheduleFields = scheduleChanged ? buildTaskScheduleFields({ ...data, scheduledDateTime: null, reminderAtDateTime: null }) : {};
+  await updateDoc(ref, { ...updates, ...scheduleFields, updatedAt: new Date().toISOString() });
+  if (scheduleChanged || Object.hasOwn(updates, 'title') || Object.hasOwn(updates, 'completed')) {
+    cancelTaskReminder(taskId);
+    const reminderPayload = buildTaskReminderPayload(taskId, { ...data, ...scheduleFields });
+    if (reminderPayload && !data.completed) scheduleReminder(reminderPayload);
   }
 }
 
 export async function deleteTask(uid, taskId) {
   if (!uid || !taskId) return;
-  cancelReminder(`task:${taskId}`);
+  cancelTaskReminder(taskId);
   const ref = doc(tasksCollection(uid), taskId);
   await deleteDoc(ref);
 }
