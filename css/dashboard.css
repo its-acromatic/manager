@@ -1,8 +1,15 @@
 .dashboard-grid {
+  --dashboard-widget-gap: clamp(16px, 2vw, 24px);
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 24px;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 320px));
+  gap: var(--dashboard-widget-gap);
   align-items: start;
+  justify-content: start;
+}
+
+.dashboard-grid.dashboard-grid--masonry {
+  grid-auto-rows: 1px;
+  grid-auto-flow: row dense;
 }
 
 .attendance-percent {

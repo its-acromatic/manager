@@ -4,6 +4,28 @@ import { countAttendanceRecords, calculateAttendancePercent, calculateSafeLeaves
 import { formatLocalISO, parseISOToLocalDate } from '../utils/date.js';
 import { fetchTasks } from '../services/taskService.js';
 
+function initDashboardMasonry() {
+  const grid = document.querySelector('.dashboard-grid');
+  if (!grid || typeof ResizeObserver === 'undefined') return;
+
+  grid.classList.add('dashboard-grid--masonry');
+  const observer = new ResizeObserver((entries) => {
+    const styles = getComputedStyle(grid);
+    const rowHeight = parseFloat(styles.gridAutoRows) || 1;
+    const rowGap = parseFloat(styles.rowGap) || 0;
+
+    entries.forEach(({ target }) => {
+      const height = target.getBoundingClientRect().height;
+      const rowSpan = Math.ceil((height + rowGap) / (rowHeight + rowGap));
+      target.style.gridRowEnd = `span ${Math.max(1, rowSpan)}`;
+    });
+  });
+
+  grid.querySelectorAll(':scope > .widget').forEach((widget) => observer.observe(widget));
+}
+
+initDashboardMasonry();
+
 function getDashboardInsight(counts, requiredPercent = 75) {
   if (counts.totalWorking === 0) return 'Smart insight: Start marking attendance to unlock recovery guidance.';
   const percent = calculateAttendancePercent(counts.present, counts.totalWorking);

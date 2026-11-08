@@ -278,12 +278,6 @@ a { color: inherit; }
   font-weight: 600;
 }
 
-.dashboard-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 24px;
-}
-
 .attendance-percent {
   font-size: clamp(2.4rem, 5vw, 3.6rem);
   font-weight: 700;
